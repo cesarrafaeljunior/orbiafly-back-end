@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16.8
+    container_name: orbiafly-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orbiafly}
+      POSTGRES_USER: ${POSTGRES_USER:-orbiafly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - orbiafly_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - orbiafly-network
+
+  pgadmin:
+    image: dpage/pgadmin4:9.8
+    container_name: orbiafly-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@orbiafly.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change_me}
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - orbiafly-network
+
+  backend:
+    profiles: ["full"]
+    build:
+      context: .
+    image: orbiafly-api:local
+    container_name: orbiafly-api
+    restart: unless-stopped
+    environment:
+      APP_PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-orbiafly}
+      DB_USERNAME: ${POSTGRES_USER:-orbiafly}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - orbiafly-network
+
+volumes:
+  orbiafly_postgres_data:
+
+networks:
+  orbiafly-network:
+    name: orbiafly-network

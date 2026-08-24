@@ -1,0 +1,2 @@
+-- Baseline tecnico inicial do backend.
+-- Nenhuma tabela de dominio financeiro deve ser criada nesta etapa.

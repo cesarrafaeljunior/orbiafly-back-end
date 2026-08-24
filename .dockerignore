@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+.env.*
+target
+docs
+infra
+AGENTS.md
+README.md
+compose.yml
