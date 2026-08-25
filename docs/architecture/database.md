@@ -16,6 +16,16 @@ Valores usam `NUMERIC(15, 2)`. As constraints validam valores nao negativos, ven
 
 Ocorrencias sao materializadas sob demanda ao consultar uma competencia. Um `INSERT ... ON CONFLICT DO NOTHING` cria apenas as ocorrencias ausentes das despesas ativas. Nao existe scheduler nem operacao de reset.
 
+`V3__financial_accounts.sql` cria:
+
+- `financial_account`, com dados cadastrais, saldo inicial, atividade e timestamps;
+- `financial_transaction`, com tipo, valor, data, descricao e referencias de origem ou estorno;
+- referencias opcionais de conta e transacao de pagamento em `fixed_expense_occurrence`.
+
+Valores usam `NUMERIC(15, 2)`. Constraints validam tipos de conta e movimentacao, sinal dos valores e consistencia entre ocorrencia paga, conta e transacao. Indices atendem saldo por conta, historico ordenado e referencias de pagamento. Unicidades impedem mais de um pagamento por ocorrencia e mais de um estorno por debito original.
+
+O saldo nao possui coluna mutavel: e calculado como `opening_balance + SUM(balance_effect)`. Debitos armazenam valor positivo e produzem efeito negativo; creditos produzem efeito positivo; ajustes armazenam diferenca assinada.
+
 ## Convencoes futuras
 
 - IDs: UUID e a estrategia inicial, pela exposicao segura e compatibilidade com evolucao multiusuario. UUID v7 podera ser avaliado quando houver suporte e necessidade concretos.

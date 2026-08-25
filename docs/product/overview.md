@@ -6,6 +6,10 @@ O produto comeca para uso individual, mas os dados e os limites de dominio dever
 
 O primeiro fluxo implementado substitui o controle manual de despesas recorrentes mensais. O usuario configura uma despesa fixa uma vez e acompanha valor, vencimento, categoria e pagamento em cada competencia sem reset mensal.
 
+O usuario tambem cadastra contas financeiras, acompanha saldo e movimentacoes e informa de onde saiu o dinheiro ao pagar uma despesa. Ajustes e estornos preservam o historico em vez de reescreve-lo.
+
+O dashboard consolida essas informacoes para responder quanto esta disponivel nas contas e quanto esta previsto, pago, pendente ou vencido no mes. Nesta etapa, o resumo nao inclui receitas, cartoes ou outros dominios financeiros.
+
 ## Principios de produto
 
 - Informacoes compreensiveis antes de excesso de detalhes.

@@ -75,6 +75,11 @@ public class ApiExceptionHandler {
     return problem(HttpStatus.BAD_REQUEST, "Parâmetros inválidos", exception.getMessage(), request);
   }
 
+  @ExceptionHandler(IllegalStateException.class)
+  ProblemDetail handleIllegalState(IllegalStateException exception, HttpServletRequest request) {
+    return problem(HttpStatus.CONFLICT, "Operação não permitida", exception.getMessage(), request);
+  }
+
   private ProblemDetail problem(
       HttpStatus status,
       String title,

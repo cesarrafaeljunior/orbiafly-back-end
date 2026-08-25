@@ -13,6 +13,7 @@
 | `DB_USERNAME` | `orbiafly` | Usuario do banco |
 | `DB_PASSWORD` | `change_me` | Senha local do banco |
 | `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:4200` | Origins CORS separadas por virgula |
+| `APP_TIME_ZONE` | `America/Sao_Paulo` | Fuso usado para derivar a data atual e despesas vencidas |
 
 ## Docker Compose
 

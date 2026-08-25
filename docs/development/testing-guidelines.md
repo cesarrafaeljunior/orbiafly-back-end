@@ -10,7 +10,11 @@ A estrategia combina testes unitarios rapidos com integracoes reais onde a infra
 
 O teste inicial `OrbiaflyApplicationTests` usa o profile `test`, inicia PostgreSQL 16.8 com a URL JDBC do Testcontainers, aplica Flyway e valida o contexto Spring.
 
-`FixedExpenseApiTests` cobre contratos HTTP, validacoes, materializacao idempotente, alteracao mensal, status, totais, snapshots historicos e desativacao com PostgreSQL real.
+`FixedExpenseApiTests` cobre contratos HTTP, validacoes, materializacao idempotente, alteracao mensal, status, totais, snapshots historicos, desativacao e o contrato integrado do dashboard com PostgreSQL real.
+
+`DashboardServiceTests` fixa o relogio da aplicacao e cobre totais, percentual, atraso, proximos vencimentos, categorias, maiores despesas, competencia vazia e ajuste de vencimento no fim do mes.
+
+`FinancialAccountApiTests` cobre cadastro, saldo derivado, ajuste, edicao, desativacao, historico, pagamento idempotente, estorno, compatibilidade historica, saldo negativo e integracao com o dashboard usando PostgreSQL real.
 
 Execute:
 

@@ -1,9 +1,12 @@
 package com.orbiafly.api.modules.fixedexpense.infrastructure.persistence;
 
 import com.orbiafly.api.modules.fixedexpense.domain.FixedExpenseOccurrence;
+import jakarta.persistence.LockModeType;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -60,4 +63,8 @@ public interface FixedExpenseOccurrenceRepository
   List<FixedExpenseOccurrence> findMonthly(
       @Param("year") int year,
       @Param("month") int month);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT occurrence FROM FixedExpenseOccurrence occurrence WHERE occurrence.id = :id")
+  Optional<FixedExpenseOccurrence> findByIdForUpdate(@Param("id") UUID id);
 }

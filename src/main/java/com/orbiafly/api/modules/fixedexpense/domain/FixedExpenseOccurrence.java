@@ -52,6 +52,12 @@ public class FixedExpenseOccurrence {
   @Column(name = "paid_at")
   private Instant paidAt;
 
+  @Column(name = "financial_account_id")
+  private UUID financialAccountId;
+
+  @Column(name = "payment_transaction_id")
+  private UUID paymentTransactionId;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
@@ -69,6 +75,18 @@ public class FixedExpenseOccurrence {
   public void updateStatus(PaymentStatus status, Instant now) {
     this.status = status;
     this.paidAt = status == PaymentStatus.PAID ? now : null;
+    if (status == PaymentStatus.PENDING) {
+      this.financialAccountId = null;
+      this.paymentTransactionId = null;
+    }
+    this.updatedAt = now;
+  }
+
+  public void registerPayment(UUID accountId, UUID transactionId, Instant now) {
+    this.status = PaymentStatus.PAID;
+    this.paidAt = now;
+    this.financialAccountId = accountId;
+    this.paymentTransactionId = transactionId;
     this.updatedAt = now;
   }
 
@@ -114,5 +132,13 @@ public class FixedExpenseOccurrence {
 
   public Instant getPaidAt() {
     return paidAt;
+  }
+
+  public UUID getFinancialAccountId() {
+    return financialAccountId;
+  }
+
+  public UUID getPaymentTransactionId() {
+    return paymentTransactionId;
   }
 }

@@ -1,6 +1,6 @@
 # Orbiafly Backend
 
-Backend e infraestrutura local do Orbiafly, uma aplicacao de organizacao financeira pessoal. O primeiro modulo funcional gerencia despesas fixas e suas ocorrencias mensais.
+Backend e infraestrutura local do Orbiafly, uma aplicacao de organizacao financeira pessoal. O backend gerencia contas, movimentacoes, despesas fixas, pagamentos e o resumo mensal usado pelo dashboard.
 
 ## Stack
 
@@ -26,7 +26,7 @@ docker compose up -d postgres pgadmin
 
 O backend fica em `http://localhost:8080` e o healthcheck em `http://localhost:8080/actuator/health`.
 
-Os endpoints da feature ficam sob `/api/v1/fixed-expenses`, `/api/v1/fixed-expense-occurrences` e `/api/v1/categories`.
+Os endpoints das features ficam sob `/api/v1/accounts`, `/api/v1/fixed-expenses`, `/api/v1/fixed-expense-occurrences`, `/api/v1/categories` e `/api/v1/dashboard/monthly`.
 
 O PostgreSQL fica em `localhost:5432`. O pgAdmin fica em `http://localhost:5050` e acessa o banco pelo host `postgres`, porta `5432`.
 

@@ -16,5 +16,7 @@ public record MonthlyExpenseView(
     String category,
     PaymentStatus status,
     Instant paidAt,
+    UUID financialAccountId,
+    String financialAccountName,
     boolean active) {
 }

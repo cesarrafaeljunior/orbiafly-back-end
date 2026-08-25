@@ -41,6 +41,8 @@ class FixedExpenseApiTests {
   void cleanExpenses() {
     jdbcTemplate.update("DELETE FROM fixed_expense_occurrence");
     jdbcTemplate.update("DELETE FROM fixed_expense");
+    jdbcTemplate.update("DELETE FROM financial_transaction");
+    jdbcTemplate.update("DELETE FROM financial_account");
   }
 
   @Test
@@ -96,6 +98,16 @@ class FixedExpenseApiTests {
         Map.of("status", "PAID"),
         200);
     org.assertj.core.api.Assertions.assertThat(paid.get("paidAt").isNull()).isFalse();
+
+    JsonNode dashboard = getDashboard(2026, 8);
+    org.assertj.core.api.Assertions.assertThat(dashboard.at("/summary/totalAmount").decimalValue())
+        .isEqualByComparingTo("247.82");
+    org.assertj.core.api.Assertions.assertThat(dashboard.at("/summary/paidAmount").decimalValue())
+        .isEqualByComparingTo("247.82");
+    org.assertj.core.api.Assertions.assertThat(dashboard.at("/summary/paidPercentage").decimalValue())
+        .isEqualByComparingTo("100.00");
+    org.assertj.core.api.Assertions.assertThat(dashboard.at("/overdue/count").asInt()).isZero();
+    org.assertj.core.api.Assertions.assertThat(dashboard.get("largestExpenses").size()).isOne();
 
     performJson(put("/api/v1/fixed-expenses/{id}", fixedExpenseId), Map.of(
         "name", "Energia residencial",
@@ -163,6 +175,12 @@ class FixedExpenseApiTests {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.title").value("Parâmetros inválidos"));
 
+    mockMvc.perform(get("/api/v1/dashboard/monthly")
+            .queryParam("year", "1999")
+            .queryParam("month", "1"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.title").value("Parâmetros inválidos"));
+
     mockMvc.perform(patch(
             "/api/v1/fixed-expense-occurrences/{id}/amount",
             "00000000-0000-0000-0000-000000000099")
@@ -174,6 +192,15 @@ class FixedExpenseApiTests {
 
   private JsonNode getMonth(int year, int month) throws Exception {
     MvcResult result = mockMvc.perform(get("/api/v1/fixed-expenses/monthly")
+            .queryParam("year", String.valueOf(year))
+            .queryParam("month", String.valueOf(month)))
+        .andExpect(status().isOk())
+        .andReturn();
+    return objectMapper.readTree(result.getResponse().getContentAsString());
+  }
+
+  private JsonNode getDashboard(int year, int month) throws Exception {
+    MvcResult result = mockMvc.perform(get("/api/v1/dashboard/monthly")
             .queryParam("year", String.valueOf(year))
             .queryParam("month", String.valueOf(month)))
         .andExpect(status().isOk())
