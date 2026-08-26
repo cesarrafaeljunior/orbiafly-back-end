@@ -59,7 +59,7 @@ public class FixedExpense {
     this.updatedAt = now;
   }
 
-  public void update(
+  public void updateFixedExpense(
       String name,
       BigDecimal defaultAmount,
       int dueDay,

@@ -10,6 +10,14 @@
 - Valide entradas na fronteira HTTP com Bean Validation.
 - Nao exponha entidades JPA diretamente.
 - Nao introduza bibliotecas sem necessidade comprovada.
+- Controllers devem depender de contratos em `application/contract`, nao de implementacoes concretas.
+- Interfaces devem usar sufixo `Interface`.
+- Implementacoes de casos de uso devem ficar em `application/service` e usar sufixo `Impl`.
+- Metodos publicos devem ter nomes concretos do caso de uso, como `createFinancialAccount`, evitando nomes genericos como `create`, `update`, `get` e `from`.
+- DTOs de transporte HTTP devem ficar em `web/dto/request` ou `web/dto/response` e terminar com `DTO`.
+- Nao use `View` para respostas HTTP; prefira nomes explicitos como `FinancialAccountResponseDTO`.
+- Controllers nao devem montar DTOs HTTP nem chamar factories. O service chamado pelo controller deve devolver o DTO de resposta ja montado.
+- Factories em `web/factory` devem ter metodos concretos de conversao, evitando nomes genericos como `from`.
 - Nao crie interfaces, factories, mappers ou classes base apenas por antecipacao.
 
 ## Persistencia

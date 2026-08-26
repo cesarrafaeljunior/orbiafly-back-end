@@ -22,6 +22,17 @@ O backend comeca como monolito modular: uma unica aplicacao Spring Boot, organiz
 
 Nao introduza microservicos, Kafka, Redis, RabbitMQ, Kubernetes, CQRS ou Event Sourcing sem necessidade real e decisao registrada. Nao crie diretorios vazios apenas por antecipacao.
 
+Modulos com API HTTP devem manter:
+
+- contratos de aplicacao em `application/contract`;
+- implementacoes em `application/service`;
+- modelos internos em `application/model`;
+- controllers em `web/controller`;
+- DTOs HTTP em `web/dto/request` e `web/dto/response`, sempre com sufixo `DTO`;
+- factories de resposta em `web/factory`.
+
+Interfaces devem usar sufixo `Interface`. Controllers devem depender de contratos de aplicacao, nao de implementacoes concretas. Controllers nao devem fazer conversao para DTO de resposta nem chamar factories; devem delegar o caso de uso ao service e retornar o DTO ja montado pelo service. Metodos publicos devem usar nomes concretos de caso de uso, evitando nomes genericos como `create`, `update`, `get` e `from`.
+
 ## Principios
 
 - Respeite estritamente o escopo da tarefa.

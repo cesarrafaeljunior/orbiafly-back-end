@@ -30,7 +30,7 @@
 ## ORB-002 - Dashboard mensal - 2026-08-25
 
 - O dashboard e um modulo de leitura sem tabelas, entities ou repositories proprios.
-- O modulo consome `FixedExpenseService` como fronteira publica e nao acessa repositories de despesas fixas.
+- O modulo consome `FixedExpenseServiceInterface` como fronteira publica e nao acessa repositories de despesas fixas.
 - Uma unica chamada retorna todas as agregacoes exigidas pela interface, evitando multiplas requisicoes e divergencia de regras no frontend.
 - A primeira versao consulta somente a competencia selecionada; comparacao com mes anterior foi adiada para nao materializar outra competencia implicitamente.
 - Atraso e derivado no momento da consulta com um `Clock` injetavel e fuso configurado por `APP_TIME_ZONE`.
@@ -54,3 +54,17 @@
 - Estorno cria um credito compensatorio ligado ao debito original. Movimentacoes financeiras nao sao apagadas.
 - `fixedexpense.application` depende da fronteira publica de `financialaccount.application`; repositories nao atravessam modulos.
 - Ocorrencias pagas antes da ORB-003 aceitam conta e transacao nulas para compatibilidade historica.
+
+## Refatoracao arquitetural de modulos - 2026-08-26
+
+- Controllers passam a ficar em `web/controller` e dependem somente de contratos em `application/contract`.
+- Todas as interfaces Java usam sufixo `Interface`.
+- Implementacoes concretas de casos de uso ficam em `application/service` com sufixo `Impl`.
+- Modelos internos retornados por casos de uso ficam em `application/model` e usam sufixo `Result` quando representam saidas da aplicacao.
+- DTOs HTTP ficam em `web/dto/request` e `web/dto/response`, sempre com sufixo `DTO`.
+- Controllers nao fazem conversao para DTOs de resposta e nao chamam factories.
+- Services chamados por controllers devolvem DTOs HTTP ja montados.
+- Factories em `web/factory` convertem modelos internos para DTOs de resposta dentro dos services.
+- Metodos publicos de services e factories usam nomes concretos do caso de uso ou conversao, evitando nomes genericos como `create`, `update`, `get` e `from`.
+- Factories em `application/factory` podem montar modelos internos a partir de entidades quando isso reduzir conversao repetida no service.
+- Nenhuma regra financeira, endpoint funcional ou schema de banco foi alterado nesta refatoracao.

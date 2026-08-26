@@ -58,7 +58,11 @@ public class FinancialAccount {
     this.updatedAt = now;
   }
 
-  public void update(String name, FinancialAccountType type, String institution, Instant now) {
+  public void updateFinancialAccount(
+      String name,
+      FinancialAccountType type,
+      String institution,
+      Instant now) {
     this.name = name;
     this.type = type;
     this.institution = institution;

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-26
+
+- Refatorada a arquitetura interna dos modulos de dashboard, contas financeiras e despesas fixas.
+- Separados contratos de aplicacao, implementacoes, modelos internos, controllers, DTOs HTTP e factories de resposta.
+- Padronizadas interfaces com sufixo `Interface`.
+- Removida a conversao direta de DTOs nos controllers; services agora devolvem os DTOs de resposta.
+- Renomeados metodos genericos de services e factories para nomes concretos.
+- Padronizados DTOs HTTP com sufixo `DTO` e removido o uso de `View` como resposta de API.
+- Preservados endpoints e comportamento funcional existentes, sem novas regras de negocio.
+
 ## 2026-08-25
 
 - Implementada a ORB-003 com contas financeiras, saldo derivado, movimentacoes, ajuste e desativacao.
