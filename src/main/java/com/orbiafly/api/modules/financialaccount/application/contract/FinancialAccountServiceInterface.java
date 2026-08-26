@@ -38,6 +38,10 @@ public interface FinancialAccountServiceInterface {
 
   FinancialAccountResponseDTO deactivateFinancialAccount(UUID id);
 
+  FinancialAccountResponseDTO reactivateFinancialAccount(UUID id);
+
+  void deleteFinancialAccount(UUID id);
+
   List<FinancialTransactionResponseDTO> listFinancialAccountTransactions(UUID accountId);
 
   AccountTransactionResponseDTO adjustFinancialAccountBalance(

@@ -74,6 +74,11 @@ public class FinancialAccount {
     this.updatedAt = now;
   }
 
+  public void reactivateFinancialAccount(Instant now) {
+    this.active = true;
+    this.updatedAt = now;
+  }
+
   public UUID getId() {
     return id;
   }

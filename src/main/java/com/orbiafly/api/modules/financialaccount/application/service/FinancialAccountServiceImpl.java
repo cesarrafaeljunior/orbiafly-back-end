@@ -23,6 +23,8 @@ import com.orbiafly.api.modules.financialaccount.web.factory.FinancialAccountRes
 import com.orbiafly.api.modules.financialaccount.web.factory.FinancialAccountsOverviewResponseDTOFactory;
 import com.orbiafly.api.modules.financialaccount.web.factory.FinancialTransactionResponseDTOFactory;
 import com.orbiafly.api.modules.fixedexpense.application.ResourceNotFoundException;
+import com.orbiafly.api.modules.fixedexpense.domain.PaymentStatus;
+import com.orbiafly.api.modules.fixedexpense.infrastructure.persistence.FixedExpenseOccurrenceRepositoryInterface;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -47,6 +49,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
   private final FinancialAccountsOverviewResponseDTOFactory overviewResponseDTOFactory;
   private final FinancialTransactionResponseDTOFactory transactionResponseDTOFactory;
   private final AccountTransactionResponseDTOFactory accountTransactionResponseDTOFactory;
+  private final FixedExpenseOccurrenceRepositoryInterface occurrenceRepository;
   private final Clock clock;
 
   public FinancialAccountServiceImpl(
@@ -58,6 +61,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
       FinancialAccountsOverviewResponseDTOFactory overviewResponseDTOFactory,
       FinancialTransactionResponseDTOFactory transactionResponseDTOFactory,
       AccountTransactionResponseDTOFactory accountTransactionResponseDTOFactory,
+      FixedExpenseOccurrenceRepositoryInterface occurrenceRepository,
       Clock clock) {
     this.accountRepository = accountRepository;
     this.transactionRepository = transactionRepository;
@@ -67,6 +71,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
     this.overviewResponseDTOFactory = overviewResponseDTOFactory;
     this.transactionResponseDTOFactory = transactionResponseDTOFactory;
     this.accountTransactionResponseDTOFactory = accountTransactionResponseDTOFactory;
+    this.occurrenceRepository = occurrenceRepository;
     this.clock = clock;
   }
 
@@ -158,6 +163,32 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
         account,
         currentBalance(account));
     return accountResponseDTOFactory.createFinancialAccountResponseDTO(result);
+  }
+
+  @Override
+  @Transactional
+  public FinancialAccountResponseDTO reactivateFinancialAccount(UUID id) {
+    FinancialAccount account = findAccountForUpdate(id);
+    account.reactivateFinancialAccount(clock.instant());
+    FinancialAccountResult result = accountResultFactory.createFinancialAccountResult(
+        account,
+        currentBalance(account));
+    return accountResponseDTOFactory.createFinancialAccountResponseDTO(result);
+  }
+
+  @Override
+  @Transactional
+  public void deleteFinancialAccount(UUID id) {
+    FinancialAccount account = findAccountForUpdate(id);
+    if (account.isActive()) {
+      throw new IllegalStateException("Desative a conta antes de excluí-la.");
+    }
+    occurrenceRepository.unlinkFinancialAccountPayments(
+        account.getId(),
+        PaymentStatus.PENDING,
+        clock.instant());
+    transactionRepository.deleteAllByFinancialAccountId(account.getId());
+    accountRepository.delete(account);
   }
 
   @Override

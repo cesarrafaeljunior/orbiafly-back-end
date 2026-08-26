@@ -24,7 +24,7 @@
 - A insercao em lote usa a unicidade do banco e `ON CONFLICT DO NOTHING` para ser idempotente.
 - Ocorrencias guardam snapshot de nome, valor, vencimento e categoria; mudancas recorrentes nao reescrevem historico.
 - Categorias sao persistidas e semeadas pela migration V2. Administracao de categorias foi adiada.
-- Desativacao e a operacao normal. Exclusao fisica nao foi exposta para proteger historico.
+- Desativacao preserva historico e bloqueia novas movimentacoes. Reativacao preserva os mesmos dados e devolve a conta aos totais ativos. Exclusao fisica so e exposta para contas ja desativadas.
 - Filtros de status, categoria e nome ficam no frontend apos a carga da competencia completa.
 
 ## ORB-002 - Dashboard mensal - 2026-08-25
@@ -44,7 +44,7 @@
 - `FinancialTransaction` e o razao imutavel de creditos, debitos, ajustes e estornos. O saldo deriva do saldo inicial somado ao efeito dessas movimentacoes.
 - Ajuste manual recebe o saldo alvo e registra somente a diferenca assinada, mantendo a reconciliacao auditavel.
 - Saldo negativo e permitido porque o sistema registra a realidade financeira e sinaliza o resultado ao consumidor.
-- Desativacao substitui exclusao fisica e bloqueia novas movimentacoes sem perder historico.
+- Desativacao bloqueia novas movimentacoes sem perder historico. Reativacao torna a conta ativa novamente sem apagar movimentacoes ou vinculos. Contas inativas podem ser excluidas definitivamente quando o usuario decidir remover tambem as movimentacoes e vinculos financeiros associados.
 
 ## ORB-003 - Pagamento atomico e estorno - 2026-08-25
 
@@ -54,6 +54,7 @@
 - Estorno cria um credito compensatorio ligado ao debito original. Movimentacoes financeiras nao sao apagadas.
 - `fixedexpense.application` depende da fronteira publica de `financialaccount.application`; repositories nao atravessam modulos.
 - Ocorrencias pagas antes da ORB-003 aceitam conta e transacao nulas para compatibilidade historica.
+- Exclusao definitiva de conta inativa volta ocorrencias pagas por essa conta para pendente, remove a referencia financeira e apaga as movimentacoes antes de remover a conta.
 
 ## Refatoracao arquitetural de modulos - 2026-08-26
 

@@ -1,10 +1,14 @@
 package com.orbiafly.api.modules.financialaccount;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -95,6 +99,20 @@ class FinancialAccountApiTests {
     mockMvc.perform(get("/api/v1/accounts").queryParam("includeInactive", "true"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.accounts", hasSize(2)));
+
+    mockMvc.perform(patch("/api/v1/accounts/{id}/reactivate", caixaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.active").value(true))
+        .andExpect(jsonPath("$.currentBalance").value(2430.00));
+
+    mockMvc.perform(get("/api/v1/accounts"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.accounts", hasSize(2)))
+        .andExpect(jsonPath("$.totalAvailableBalance").value(3630.00));
+
+    mockMvc.perform(get("/api/v1/accounts/{id}/transactions", caixaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)));
   }
 
   @Test
@@ -186,6 +204,58 @@ class FinancialAccountApiTests {
         "SELECT COUNT(*) FROM financial_transaction",
         Integer.class);
     Assertions.assertThat(transactionCount).isZero();
+  }
+
+  @Test
+  void deletesInactiveAccountTransactionsAndPaymentLinks() throws Exception {
+    createExpense("Internet", 100.00, 10);
+    String occurrenceId = getMonth(2026, 8).at("/items/0/occurrenceId").asText();
+    JsonNode account = createAccount("Carteira", "CASH", "", 150.00);
+    String accountId = account.get("id").asText();
+
+    performJson(
+        post("/api/v1/fixed-expense-occurrences/{id}/payment", occurrenceId),
+        Map.of("financialAccountId", accountId, "paymentDate", "2026-08-25"),
+        200);
+    mockMvc.perform(patch("/api/v1/accounts/{id}/deactivate", accountId))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(delete("/api/v1/accounts/{id}", accountId))
+        .andExpect(status().isNoContent());
+
+    mockMvc.perform(get("/api/v1/accounts").queryParam("includeInactive", "true"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.accounts", hasSize(0)))
+        .andExpect(jsonPath("$.totalAvailableBalance").value(0));
+    mockMvc.perform(get("/api/v1/accounts/{id}", accountId))
+        .andExpect(status().isNotFound());
+
+    JsonNode month = getMonth(2026, 8);
+    Assertions.assertThat(month.at("/items/0/status").asText()).isEqualTo("PENDING");
+    JsonNode financialAccountId = month.at("/items/0/financialAccountId");
+    Assertions.assertThat(financialAccountId.isMissingNode() || financialAccountId.isNull())
+        .isTrue();
+    Assertions.assertThat(month.at("/summary/pendingTotal").decimalValue())
+        .isEqualByComparingTo("100.00");
+
+    Integer accountCount = jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM financial_account",
+        Integer.class);
+    Integer transactionCount = jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM financial_transaction",
+        Integer.class);
+    Assertions.assertThat(accountCount).isZero();
+    Assertions.assertThat(transactionCount).isZero();
+  }
+
+  @Test
+  void allowsDeleteAccountPreflightFromLocalFrontend() throws Exception {
+    mockMvc.perform(options("/api/v1/accounts/{id}", "00000000-0000-0000-0000-000000000001")
+            .header("Origin", "http://127.0.0.1:4201")
+            .header("Access-Control-Request-Method", "DELETE"))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Access-Control-Allow-Origin", "http://127.0.0.1:4201"))
+        .andExpect(header().string("Access-Control-Allow-Methods", containsString("DELETE")));
   }
 
   private JsonNode createAccount(String name, String type, String institution, double openingBalance)

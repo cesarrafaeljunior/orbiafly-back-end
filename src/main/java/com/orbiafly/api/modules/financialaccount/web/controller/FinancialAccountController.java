@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -70,6 +71,17 @@ public class FinancialAccountController {
   @PatchMapping("/{id}/deactivate")
   public FinancialAccountResponseDTO deactivateFinancialAccount(@PathVariable UUID id) {
     return service.deactivateFinancialAccount(id);
+  }
+
+  @PatchMapping("/{id}/reactivate")
+  public FinancialAccountResponseDTO reactivateFinancialAccount(@PathVariable UUID id) {
+    return service.reactivateFinancialAccount(id);
+  }
+
+  @DeleteMapping("/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteFinancialAccount(@PathVariable UUID id) {
+    service.deleteFinancialAccount(id);
   }
 
   @GetMapping("/{id}/transactions")

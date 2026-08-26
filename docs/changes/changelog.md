@@ -9,6 +9,8 @@
 - Renomeados metodos genericos de services e factories para nomes concretos.
 - Padronizados DTOs HTTP com sufixo `DTO` e removido o uso de `View` como resposta de API.
 - Preservados endpoints e comportamento funcional existentes, sem novas regras de negocio.
+- Adicionada exclusao definitiva de contas financeiras inativas com remocao de movimentacoes e limpeza de vinculos de pagamentos.
+- Adicionada reativacao de contas financeiras preservando historico, movimentacoes e vinculos existentes.
 
 ## 2026-08-25
 

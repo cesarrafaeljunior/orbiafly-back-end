@@ -1,7 +1,9 @@
 package com.orbiafly.api.modules.fixedexpense.infrastructure.persistence;
 
 import com.orbiafly.api.modules.fixedexpense.domain.FixedExpenseOccurrence;
+import com.orbiafly.api.modules.fixedexpense.domain.PaymentStatus;
 import jakarta.persistence.LockModeType;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -67,4 +69,19 @@ public interface FixedExpenseOccurrenceRepositoryInterface
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT occurrence FROM FixedExpenseOccurrence occurrence WHERE occurrence.id = :id")
   Optional<FixedExpenseOccurrence> findByIdForUpdate(@Param("id") UUID id);
+
+  @Modifying
+  @Query("""
+      UPDATE FixedExpenseOccurrence occurrence
+      SET occurrence.status = :status,
+          occurrence.paidAt = NULL,
+          occurrence.financialAccountId = NULL,
+          occurrence.paymentTransactionId = NULL,
+          occurrence.updatedAt = :updatedAt
+      WHERE occurrence.financialAccountId = :financialAccountId
+      """)
+  int unlinkFinancialAccountPayments(
+      @Param("financialAccountId") UUID financialAccountId,
+      @Param("status") PaymentStatus status,
+      @Param("updatedAt") Instant updatedAt);
 }
