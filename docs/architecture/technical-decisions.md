@@ -56,6 +56,26 @@
 - Ocorrencias pagas antes da ORB-003 aceitam conta e transacao nulas para compatibilidade historica.
 - Exclusao definitiva de conta inativa volta ocorrencias pagas por essa conta para pendente, remove a referencia financeira e apaga as movimentacoes antes de remover a conta.
 
+## ORB - Contrato mensal enriquecido de despesas fixas - 2026-08-27
+
+- O endpoint mensal de despesas fixas preserva os campos existentes e adiciona contagem total, percentual financeiro pago, data de vencimento e informacoes derivadas de atraso.
+- `OVERDUE` nao foi persistido como status. Uma ocorrencia vencida continua sendo `PENDING` com `dueDate` anterior ao dia atual no fuso da aplicacao.
+- Vencimentos em dia inexistente na competencia usam o ultimo dia valido do mes.
+- O percentual pago usa escala 2 e `HALF_UP`; quando o total e zero, o contrato mensal de despesas retorna `0.00`.
+- O Dashboard preserva sua semantica anterior e continua retornando `null` para percentual sem total.
+- Nenhuma migration foi criada porque os novos dados sao derivados de ano, mes, vencimento, status e valor.
+- Cartao de credito permanece fora do escopo; pagamento de despesa fixa nesta etapa usa somente `FinancialAccount`.
+
+## ORB - Cartoes de credito - 2026-08-27
+
+- `CreditCard` foi criado em modulo proprio, separado de `FinancialAccount`, para preservar a distincao entre dinheiro disponivel e credito/divida.
+- Cartoes usam soft delete por `deletedAt`; consultas normais excluem registros deletados e podem incluir inativos por parametro.
+- Limite utilizado e limite disponivel fazem parte do contrato da API, mas sao derivados. Nesta primeira versao, sem compras, utilizado e zero e disponivel e igual ao limite total.
+- A API retorna overview e listagem na mesma chamada para evitar chamadas paralelas na tela.
+- Dados sensiveis de cartao, como numero completo, CVV, senha ou PIN, nao fazem parte do modelo.
+- Compras, parcelamentos, faturas, pagamento de fatura e integracao com contas financeiras foram adiados.
+- Regra futura registrada: compras parceladas devem comprometer o valor total da compra no limite no momento inicial.
+
 ## Refatoracao arquitetural de modulos - 2026-08-26
 
 - Controllers passam a ficar em `web/controller` e dependem somente de contratos em `application/contract`.

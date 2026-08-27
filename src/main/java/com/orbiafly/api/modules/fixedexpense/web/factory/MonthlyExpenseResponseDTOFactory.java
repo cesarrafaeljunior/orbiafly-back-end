@@ -14,6 +14,7 @@ public class MonthlyExpenseResponseDTOFactory {
         item.name(),
         item.amount(),
         item.defaultAmount(),
+        item.dueDate(),
         item.dueDay(),
         item.categoryId(),
         item.category(),
@@ -21,6 +22,9 @@ public class MonthlyExpenseResponseDTOFactory {
         item.paidAt(),
         item.financialAccountId(),
         item.financialAccountName(),
+        item.overdue(),
+        item.daysUntilDue(),
+        item.daysOverdue(),
         item.active());
   }
 }

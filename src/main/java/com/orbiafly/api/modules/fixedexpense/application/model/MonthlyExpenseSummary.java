@@ -6,6 +6,8 @@ public record MonthlyExpenseSummary(
     BigDecimal total,
     BigDecimal paidTotal,
     BigDecimal pendingTotal,
+    int totalCount,
     int paidCount,
-    int pendingCount) {
+    int pendingCount,
+    BigDecimal paidPercentage) {
 }

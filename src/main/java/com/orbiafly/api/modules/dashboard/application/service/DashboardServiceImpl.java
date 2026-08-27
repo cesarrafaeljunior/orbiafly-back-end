@@ -67,10 +67,10 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         monthlySummary.total(),
         monthlySummary.paidTotal(),
         monthlySummary.pendingTotal(),
-        monthlySummary.paidCount() + monthlySummary.pendingCount(),
+        monthlySummary.totalCount(),
         monthlySummary.paidCount(),
         monthlySummary.pendingCount(),
-        percentage(monthlySummary.paidTotal(), monthlySummary.total()));
+        monthlySummary.total().signum() == 0 ? null : monthlySummary.paidPercentage());
 
     List<ExpenseItem> overdueItems = items.stream()
         .filter(item -> item.status() == PaymentStatus.PENDING)
@@ -116,14 +116,18 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
   }
 
   private ExpenseItem toExpenseItem(MonthlyExpenseResponseDTO item, int year, int month) {
-    YearMonth competence = YearMonth.of(year, month);
-    int validDay = Math.min(item.dueDay(), competence.lengthOfMonth());
+    LocalDate dueDate = item.dueDate();
+    if (dueDate == null) {
+      YearMonth competence = YearMonth.of(year, month);
+      int validDay = Math.min(item.dueDay(), competence.lengthOfMonth());
+      dueDate = competence.atDay(validDay);
+    }
     return new ExpenseItem(
         item.occurrenceId(),
         item.name(),
         item.amount(),
         item.dueDay(),
-        competence.atDay(validDay),
+        dueDate,
         item.categoryId(),
         item.category(),
         item.status());

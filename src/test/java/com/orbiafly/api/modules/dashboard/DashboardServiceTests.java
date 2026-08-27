@@ -73,8 +73,10 @@ class DashboardServiceTests {
             new BigDecimal("2500.00"),
             new BigDecimal("1200.00"),
             new BigDecimal("1300.00"),
+            5,
             2,
-            3),
+            3,
+            new BigDecimal("48.00")),
         items));
 
     DashboardMonthlyResponseDTO dashboard = dashboardService.getMonthlyDashboard(2026, 8);
@@ -113,7 +115,9 @@ class DashboardServiceTests {
             BigDecimal.ZERO,
             BigDecimal.ZERO,
             0,
-            0),
+            0,
+            0,
+            BigDecimal.ZERO),
         List.of()));
 
     DashboardMonthlyResponseDTO dashboard = dashboardService.getMonthlyDashboard(2026, 9);
@@ -142,8 +146,10 @@ class DashboardServiceTests {
             new BigDecimal("100.00"),
             BigDecimal.ZERO,
             new BigDecimal("100.00"),
+            1,
             0,
-            1),
+            1,
+            BigDecimal.ZERO),
         List.of(item)));
 
     DashboardMonthlyResponseDTO dashboard = dashboardService.getMonthlyDashboard(2026, 2);
@@ -166,11 +172,15 @@ class DashboardServiceTests {
         name,
         new BigDecimal(amount),
         new BigDecimal(amount),
+        null,
         dueDay,
         categoryId,
         category,
         status,
         status == PaymentStatus.PAID ? Instant.parse("2026-08-10T12:00:00Z") : null,
+        null,
+        null,
+        false,
         null,
         null,
         true);

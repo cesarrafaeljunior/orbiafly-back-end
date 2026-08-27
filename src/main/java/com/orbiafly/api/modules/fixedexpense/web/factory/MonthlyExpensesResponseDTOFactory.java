@@ -31,7 +31,9 @@ public class MonthlyExpensesResponseDTOFactory {
         summary.total(),
         summary.paidTotal(),
         summary.pendingTotal(),
+        summary.totalCount(),
         summary.paidCount(),
-        summary.pendingCount());
+        summary.pendingCount(),
+        summary.paidPercentage());
   }
 }

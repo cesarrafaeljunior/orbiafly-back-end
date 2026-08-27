@@ -39,7 +39,7 @@ Origins permitidas sao configuradas por `APP_CORS_ALLOWED_ORIGINS`. O default lo
 | `PATCH` | `/api/v1/fixed-expense-occurrences/{id}/status` | Alterna entre `PENDING` e `PAID`. |
 | `POST` | `/api/v1/fixed-expense-occurrences/{id}/payment` | Registra pagamento com conta e data. |
 
-A listagem mensal e ordenada por vencimento e nome. Nao possui paginacao porque o volume esperado e pessoal e limitado. Com contas ativas, marcar como paga exige o endpoint de pagamento; voltar para pendente estorna automaticamente uma movimentacao vinculada.
+A listagem mensal e ordenada por vencimento e nome. Nao possui paginacao porque o volume esperado e pessoal e limitado. A resposta mensal inclui resumo financeiro com total, pago, pendente, quantidades e `paidPercentage`, alem de cada item carregar `dueDate`, `overdue`, `daysUntilDue` e `daysOverdue`. `overdue` e derivado de `status=PENDING` e vencimento anterior ao dia atual. Com contas ativas, marcar como paga exige o endpoint de pagamento; voltar para pendente estorna automaticamente uma movimentacao vinculada.
 
 ## Contas financeiras
 

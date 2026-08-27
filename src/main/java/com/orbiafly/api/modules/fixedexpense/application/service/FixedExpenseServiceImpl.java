@@ -34,6 +34,7 @@ import com.orbiafly.api.modules.fixedexpense.web.factory.FixedExpenseResponseDTO
 import com.orbiafly.api.modules.fixedexpense.web.factory.MonthlyExpenseResponseDTOFactory;
 import com.orbiafly.api.modules.fixedexpense.web.factory.MonthlyExpensesResponseDTOFactory;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -306,13 +307,25 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
     BigDecimal pendingTotal = totalByStatus(items, PaymentStatus.PENDING);
     int paidCount = countByStatus(items, PaymentStatus.PAID);
     int pendingCount = countByStatus(items, PaymentStatus.PENDING);
+    BigDecimal total = paidTotal.add(pendingTotal);
     MonthlyExpenseSummary summary = new MonthlyExpenseSummary(
-        paidTotal.add(pendingTotal),
+        total,
         paidTotal,
         pendingTotal,
+        items.size(),
         paidCount,
-        pendingCount);
+        pendingCount,
+        paidPercentage(paidTotal, total));
     return new MonthlyExpensesResult(year, month, summary, items);
+  }
+
+  private BigDecimal paidPercentage(BigDecimal paidTotal, BigDecimal total) {
+    if (total.signum() == 0) {
+      return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    }
+    return paidTotal
+        .multiply(BigDecimal.valueOf(100))
+        .divide(total, 2, RoundingMode.HALF_UP);
   }
 
   private BigDecimal totalByStatus(List<MonthlyExpenseResult> items, PaymentStatus status) {

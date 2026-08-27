@@ -82,6 +82,14 @@ class FixedExpenseApiTests {
         .isEqualByComparingTo("200.00");
     org.assertj.core.api.Assertions.assertThat(august.at("/items/0/status").asText())
         .isEqualTo("PENDING");
+    org.assertj.core.api.Assertions.assertThat(august.at("/items/0/dueDate").asText())
+        .isEqualTo("2026-08-18");
+    org.assertj.core.api.Assertions.assertThat(august.at("/items/0/overdue").asBoolean())
+        .isTrue();
+    org.assertj.core.api.Assertions.assertThat(august.at("/summary/totalCount").asInt())
+        .isEqualTo(1);
+    org.assertj.core.api.Assertions.assertThat(august.at("/summary/paidPercentage").decimalValue())
+        .isEqualByComparingTo("0.00");
 
     getMonth(2026, 8);
     Integer occurrenceCount = jdbcTemplate.queryForObject(
@@ -129,6 +137,8 @@ class FixedExpenseApiTests {
         .isEqualByComparingTo("247.82");
     org.assertj.core.api.Assertions.assertThat(augustHistory.at("/summary/pendingTotal").decimalValue())
         .isEqualByComparingTo("0.00");
+    org.assertj.core.api.Assertions.assertThat(augustHistory.at("/summary/paidPercentage").decimalValue())
+        .isEqualByComparingTo("100.00");
 
     JsonNode september = getMonth(2026, 9);
     String septemberOccurrenceId = september.at("/items/0/occurrenceId").asText();
