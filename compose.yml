@@ -6,9 +6,9 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-orbiafly}
       POSTGRES_USER: ${POSTGRES_USER:-orbiafly}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orbiafly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5487}:5432"
     volumes:
       - orbiafly_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -49,8 +49,15 @@ services:
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-orbiafly}
       DB_USERNAME: ${POSTGRES_USER:-orbiafly}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
-      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-123}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://localhost:4201,http://127.0.0.1:4200,http://127.0.0.1:4201}
+      APP_SECURITY_ENABLED: ${APP_SECURITY_ENABLED:-true}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-local-development-secret-key-with-at-least-32-bytes}
+      APP_JWT_ISSUER: ${APP_JWT_ISSUER:-orbiafly-api}
+      APP_JWT_EXPIRATION_MINUTES: ${APP_JWT_EXPIRATION_MINUTES:-480}
+      APP_INITIAL_ADMIN_USERNAME: ${APP_INITIAL_ADMIN_USERNAME:-admin}
+      APP_INITIAL_ADMIN_EMAIL: ${APP_INITIAL_ADMIN_EMAIL:-admin@admin.com.br}
+      APP_INITIAL_ADMIN_PASSWORD: ${APP_INITIAL_ADMIN_PASSWORD:-admin}
     ports:
       - "${APP_PORT:-4000}:4000"
     depends_on:

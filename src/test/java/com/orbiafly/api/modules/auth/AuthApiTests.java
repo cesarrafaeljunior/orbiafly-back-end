@@ -61,14 +61,16 @@ class AuthApiTests {
     jdbcTemplate.update("DELETE FROM credit_card_installment");
     jdbcTemplate.update("DELETE FROM credit_card_purchase");
     jdbcTemplate.update("DELETE FROM credit_card");
+    jdbcTemplate.update("DELETE FROM installment_expense_installment");
+    jdbcTemplate.update("DELETE FROM installment_purchase");
     jdbcTemplate.update("DELETE FROM fixed_expense_occurrence");
     jdbcTemplate.update("DELETE FROM fixed_expense");
     jdbcTemplate.update("DELETE FROM financial_transaction");
     jdbcTemplate.update("DELETE FROM financial_account");
     jdbcTemplate.update("DELETE FROM app_user_role WHERE user_id <> ?::uuid",
-        "00000000-0000-0000-0000-000000000001");
+        "00000000-0000-0000-0000-000000000100");
     jdbcTemplate.update("DELETE FROM app_user WHERE id <> ?::uuid",
-        "00000000-0000-0000-0000-000000000001");
+        "00000000-0000-0000-0000-000000000100");
   }
 
   @Test

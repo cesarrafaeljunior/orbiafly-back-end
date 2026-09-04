@@ -49,6 +49,8 @@ class FinancialAccountApiTests {
     jdbcTemplate.update("DELETE FROM loan_entry");
     jdbcTemplate.update("DELETE FROM loan_installment");
     jdbcTemplate.update("DELETE FROM loan");
+    jdbcTemplate.update("DELETE FROM installment_expense_installment");
+    jdbcTemplate.update("DELETE FROM installment_purchase");
     jdbcTemplate.update("DELETE FROM fixed_expense_occurrence");
     jdbcTemplate.update("DELETE FROM fixed_expense");
     jdbcTemplate.update("DELETE FROM financial_transaction");

@@ -22,13 +22,13 @@ public class AppUser {
   @Id
   private UUID id;
 
-  @Column(nullable = false, unique = true, length = 180)
+  @Column(nullable = false, unique = true, length = 160)
   private String email;
 
   @Column(nullable = false, unique = true, length = 80)
   private String username;
 
-  @Column(name = "password_hash", nullable = false, length = 100)
+  @Column(name = "password_hash", nullable = false, length = 120)
   private String passwordHash;
 
   @Column(nullable = false)

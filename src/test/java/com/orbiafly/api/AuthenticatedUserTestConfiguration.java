@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Primary;
 @TestConfiguration
 public class AuthenticatedUserTestConfiguration {
 
-  public static final UUID ADMIN_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+  public static final UUID ADMIN_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000100");
 
   @Bean
   @Primary

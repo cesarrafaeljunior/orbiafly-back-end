@@ -42,6 +42,8 @@ class FixedExpenseApiTests {
 
   @BeforeEach
   void cleanExpenses() {
+    jdbcTemplate.update("DELETE FROM installment_expense_installment");
+    jdbcTemplate.update("DELETE FROM installment_purchase");
     jdbcTemplate.update("DELETE FROM fixed_expense_occurrence");
     jdbcTemplate.update("DELETE FROM fixed_expense");
     jdbcTemplate.update("DELETE FROM financial_transaction");
