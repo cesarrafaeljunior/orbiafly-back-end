@@ -1,5 +1,6 @@
 package com.orbiafly.api.modules.fixedexpense.application.service;
 
+import com.orbiafly.api.modules.auth.application.contract.CurrentUserServiceInterface;
 import com.orbiafly.api.modules.financialaccount.application.contract.FinancialAccountServiceInterface;
 import com.orbiafly.api.modules.financialaccount.application.model.AccountTransactionResult;
 import com.orbiafly.api.modules.financialaccount.application.model.FinancialAccountResult;
@@ -33,6 +34,7 @@ import com.orbiafly.api.modules.fixedexpense.web.factory.FixedExpensePaymentResp
 import com.orbiafly.api.modules.fixedexpense.web.factory.FixedExpenseResponseDTOFactory;
 import com.orbiafly.api.modules.fixedexpense.web.factory.MonthlyExpenseResponseDTOFactory;
 import com.orbiafly.api.modules.fixedexpense.web.factory.MonthlyExpensesResponseDTOFactory;
+import com.orbiafly.api.modules.user.domain.User;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
@@ -58,6 +60,7 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
   private final FixedExpenseRepositoryInterface fixedExpenseRepository;
   private final FixedExpenseOccurrenceRepositoryInterface occurrenceRepository;
   private final FinancialAccountServiceInterface financialAccountService;
+  private final CurrentUserServiceInterface currentUserService;
   private final CategoryResultFactory categoryResultFactory;
   private final FixedExpenseResultFactory fixedExpenseResultFactory;
   private final MonthlyExpenseResultFactory monthlyExpenseResultFactory;
@@ -73,6 +76,7 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
       FixedExpenseRepositoryInterface fixedExpenseRepository,
       FixedExpenseOccurrenceRepositoryInterface occurrenceRepository,
       FinancialAccountServiceInterface financialAccountService,
+      CurrentUserServiceInterface currentUserService,
       CategoryResultFactory categoryResultFactory,
       FixedExpenseResultFactory fixedExpenseResultFactory,
       MonthlyExpenseResultFactory monthlyExpenseResultFactory,
@@ -86,6 +90,7 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
     this.fixedExpenseRepository = fixedExpenseRepository;
     this.occurrenceRepository = occurrenceRepository;
     this.financialAccountService = financialAccountService;
+    this.currentUserService = currentUserService;
     this.categoryResultFactory = categoryResultFactory;
     this.fixedExpenseResultFactory = fixedExpenseResultFactory;
     this.monthlyExpenseResultFactory = monthlyExpenseResultFactory;
@@ -109,7 +114,8 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
   @Override
   @Transactional(readOnly = true)
   public List<FixedExpenseResponseDTO> listFixedExpenses() {
-    return fixedExpenseRepository.findAllByOrderByNameAsc().stream()
+    return fixedExpenseRepository.findAllByOwnerIdOrderByNameAsc(
+            currentUserService.getCurrentUser().getId()).stream()
         .map(fixedExpenseResultFactory::createFixedExpenseResult)
         .map(fixedExpenseResponseDTOFactory::createFixedExpenseResponseDTO)
         .toList();
@@ -125,6 +131,7 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
     Category category = findCategory(categoryId);
     Instant now = clock.instant();
     FixedExpense expense = new FixedExpense(
+        currentUserService.getCurrentUser(),
         normalizeName(name),
         defaultAmount,
         dueDay,
@@ -160,11 +167,11 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
   @Transactional
   public MonthlyExpensesResponseDTO getMonthlyFixedExpenses(int year, int month) {
     validatePeriod(year, month);
-    occurrenceRepository.materializeActiveExpenses(year, month);
+    occurrenceRepository.materializeActiveExpenses(year, month, currentUserService.getCurrentUser().getId());
     MonthlyExpensesResult result = createMonthlyExpensesResult(
         year,
         month,
-        occurrenceRepository.findMonthly(year, month));
+        occurrenceRepository.findMonthly(year, month, currentUserService.getCurrentUser().getId()));
     return monthlyExpensesResponseDTOFactory.createMonthlyExpensesResponseDTO(result);
   }
 
@@ -258,12 +265,12 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
   }
 
   private FixedExpense findExpense(UUID id) {
-    return fixedExpenseRepository.findById(id)
+    return fixedExpenseRepository.findByIdAndOwnerId(id, currentUserService.getCurrentUser().getId())
         .orElseThrow(() -> new ResourceNotFoundException("Despesa fixa não encontrada."));
   }
 
   private FixedExpenseOccurrence findOccurrenceForUpdate(UUID id) {
-    return occurrenceRepository.findByIdForUpdate(id)
+    return occurrenceRepository.findByIdAndOwnerIdForUpdate(id, currentUserService.getCurrentUser().getId())
         .orElseThrow(() -> new ResourceNotFoundException("Ocorrência mensal não encontrada."));
   }
 

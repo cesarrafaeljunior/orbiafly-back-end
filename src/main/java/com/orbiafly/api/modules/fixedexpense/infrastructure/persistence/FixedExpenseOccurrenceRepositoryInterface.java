@@ -28,6 +28,7 @@ public interface FixedExpenseOccurrenceRepositoryInterface
         due_day,
         category_id,
         category_name,
+        user_id,
         status,
         paid_at,
         created_at,
@@ -43,32 +44,39 @@ public interface FixedExpenseOccurrenceRepositoryInterface
         expense.due_day,
         category.id,
         category.name,
+        expense.user_id,
         'PENDING',
         NULL,
         CURRENT_TIMESTAMP,
         CURRENT_TIMESTAMP
       FROM fixed_expense expense
       JOIN category ON category.id = expense.category_id
-      WHERE expense.active = TRUE
+      WHERE expense.active = TRUE AND expense.user_id = :ownerId
       ON CONFLICT (fixed_expense_id, occurrence_year, occurrence_month) DO NOTHING
       """, nativeQuery = true)
-  int materializeActiveExpenses(@Param("year") int year, @Param("month") int month);
+  int materializeActiveExpenses(
+      @Param("year") int year,
+      @Param("month") int month,
+      @Param("ownerId") UUID ownerId);
 
   @Query("""
       SELECT occurrence
       FROM FixedExpenseOccurrence occurrence
       JOIN FETCH occurrence.fixedExpense expense
       JOIN FETCH expense.category
-      WHERE occurrence.year = :year AND occurrence.month = :month
+      WHERE occurrence.year = :year AND occurrence.month = :month AND occurrence.owner.id = :ownerId
       ORDER BY occurrence.dueDay ASC, occurrence.name ASC
       """)
   List<FixedExpenseOccurrence> findMonthly(
       @Param("year") int year,
-      @Param("month") int month);
+      @Param("month") int month,
+      @Param("ownerId") UUID ownerId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("SELECT occurrence FROM FixedExpenseOccurrence occurrence WHERE occurrence.id = :id")
-  Optional<FixedExpenseOccurrence> findByIdForUpdate(@Param("id") UUID id);
+  @Query("SELECT occurrence FROM FixedExpenseOccurrence occurrence WHERE occurrence.id = :id AND occurrence.owner.id = :ownerId")
+  Optional<FixedExpenseOccurrence> findByIdAndOwnerIdForUpdate(
+      @Param("id") UUID id,
+      @Param("ownerId") UUID ownerId);
 
   @Modifying
   @Query("""
@@ -78,10 +86,11 @@ public interface FixedExpenseOccurrenceRepositoryInterface
           occurrence.financialAccountId = NULL,
           occurrence.paymentTransactionId = NULL,
           occurrence.updatedAt = :updatedAt
-      WHERE occurrence.financialAccountId = :financialAccountId
+      WHERE occurrence.financialAccountId = :financialAccountId AND occurrence.owner.id = :ownerId
       """)
   int unlinkFinancialAccountPayments(
       @Param("financialAccountId") UUID financialAccountId,
+      @Param("ownerId") UUID ownerId,
       @Param("status") PaymentStatus status,
       @Param("updatedAt") Instant updatedAt);
 }

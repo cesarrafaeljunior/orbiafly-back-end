@@ -1,10 +1,14 @@
 package com.orbiafly.api.modules.creditcard.domain;
 
+import com.orbiafly.api.modules.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -16,6 +20,10 @@ public class CreditCard {
 
   @Id
   private UUID id;
+
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User owner;
 
   @Column(nullable = false, length = 120)
   private String name;
@@ -52,6 +60,7 @@ public class CreditCard {
   }
 
   public CreditCard(
+      User owner,
       String name,
       CreditCardBrand brand,
       String lastFourDigits,
@@ -60,6 +69,7 @@ public class CreditCard {
       int dueDay,
       Instant now) {
     this.id = UUID.randomUUID();
+    this.owner = owner;
     this.name = name;
     this.brand = brand;
     this.lastFourDigits = lastFourDigits;
@@ -106,6 +116,10 @@ public class CreditCard {
 
   public UUID getId() {
     return id;
+  }
+
+  public User getOwner() {
+    return owner;
   }
 
   public String getName() {

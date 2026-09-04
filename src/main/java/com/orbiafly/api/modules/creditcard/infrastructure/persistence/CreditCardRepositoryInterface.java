@@ -12,13 +12,13 @@ import org.springframework.data.repository.query.Param;
 
 public interface CreditCardRepositoryInterface extends JpaRepository<CreditCard, UUID> {
 
-  List<CreditCard> findAllByActiveTrueAndDeletedAtIsNullOrderByNameAsc();
+  List<CreditCard> findAllByOwnerIdAndActiveTrueAndDeletedAtIsNullOrderByNameAsc(UUID ownerId);
 
-  List<CreditCard> findAllByDeletedAtIsNullOrderByActiveDescNameAsc();
+  List<CreditCard> findAllByOwnerIdAndDeletedAtIsNullOrderByActiveDescNameAsc(UUID ownerId);
 
-  Optional<CreditCard> findByIdAndDeletedAtIsNull(UUID id);
+  Optional<CreditCard> findByIdAndOwnerIdAndDeletedAtIsNull(UUID id, UUID ownerId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("SELECT card FROM CreditCard card WHERE card.id = :id AND card.deletedAt IS NULL")
-  Optional<CreditCard> findByIdForUpdate(@Param("id") UUID id);
+  @Query("SELECT card FROM CreditCard card WHERE card.id = :id AND card.owner.id = :ownerId AND card.deletedAt IS NULL")
+  Optional<CreditCard> findByIdAndOwnerIdForUpdate(@Param("id") UUID id, @Param("ownerId") UUID ownerId);
 }

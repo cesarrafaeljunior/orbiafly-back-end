@@ -1,5 +1,6 @@
 package com.orbiafly.api.modules.creditcard.application.service;
 
+import com.orbiafly.api.modules.auth.application.contract.CurrentUserServiceInterface;
 import com.orbiafly.api.modules.creditcard.application.contract.CreditCardServiceInterface;
 import com.orbiafly.api.modules.creditcard.application.factory.CreditCardResultFactory;
 import com.orbiafly.api.modules.creditcard.application.model.CreditCardOverviewResult;
@@ -12,6 +13,7 @@ import com.orbiafly.api.modules.creditcard.web.dto.response.CreditCardResponseDT
 import com.orbiafly.api.modules.creditcard.web.factory.CreditCardOverviewResponseDTOFactory;
 import com.orbiafly.api.modules.creditcard.web.factory.CreditCardResponseDTOFactory;
 import com.orbiafly.api.modules.fixedexpense.application.ResourceNotFoundException;
+import com.orbiafly.api.modules.user.domain.User;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -27,6 +29,7 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
   private final CreditCardResultFactory cardResultFactory;
   private final CreditCardResponseDTOFactory cardResponseDTOFactory;
   private final CreditCardOverviewResponseDTOFactory overviewResponseDTOFactory;
+  private final CurrentUserServiceInterface currentUserService;
   private final Clock clock;
 
   public CreditCardServiceImpl(
@@ -34,20 +37,23 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
       CreditCardResultFactory cardResultFactory,
       CreditCardResponseDTOFactory cardResponseDTOFactory,
       CreditCardOverviewResponseDTOFactory overviewResponseDTOFactory,
+      CurrentUserServiceInterface currentUserService,
       Clock clock) {
     this.cardRepository = cardRepository;
     this.cardResultFactory = cardResultFactory;
     this.cardResponseDTOFactory = cardResponseDTOFactory;
     this.overviewResponseDTOFactory = overviewResponseDTOFactory;
+    this.currentUserService = currentUserService;
     this.clock = clock;
   }
 
   @Override
   @Transactional(readOnly = true)
   public CreditCardOverviewResponseDTO listCreditCards(boolean includeInactive) {
+    User owner = currentUserService.getCurrentUser();
     List<CreditCard> cards = includeInactive
-        ? cardRepository.findAllByDeletedAtIsNullOrderByActiveDescNameAsc()
-        : cardRepository.findAllByActiveTrueAndDeletedAtIsNullOrderByNameAsc();
+        ? cardRepository.findAllByOwnerIdAndDeletedAtIsNullOrderByActiveDescNameAsc(owner.getId())
+        : cardRepository.findAllByOwnerIdAndActiveTrueAndDeletedAtIsNullOrderByNameAsc(owner.getId());
     List<CreditCardResult> views = cards.stream()
         .map(cardResultFactory::createCreditCardResult)
         .toList();
@@ -72,7 +78,8 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
   @Override
   @Transactional(readOnly = true)
   public CreditCardResponseDTO getCreditCard(UUID id) {
-    return cardRepository.findByIdAndDeletedAtIsNull(id)
+    return cardRepository.findByIdAndOwnerIdAndDeletedAtIsNull(
+            id, currentUserService.getCurrentUser().getId())
         .map(cardResultFactory::createCreditCardResult)
         .map(cardResponseDTOFactory::createCreditCardResponseDTO)
         .orElseThrow(() -> new ResourceNotFoundException("Cartão de crédito não encontrado."));
@@ -90,6 +97,7 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
     validateTotalLimit(totalLimit);
     Instant now = clock.instant();
     CreditCard card = new CreditCard(
+        currentUserService.getCurrentUser(),
         normalizeRequired(name),
         brand,
         normalizeLastFourDigits(lastFourDigits),
@@ -151,7 +159,7 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
   }
 
   private CreditCard findCardForUpdate(UUID id) {
-    return cardRepository.findByIdForUpdate(id)
+    return cardRepository.findByIdAndOwnerIdForUpdate(id, currentUserService.getCurrentUser().getId())
         .orElseThrow(() -> new ResourceNotFoundException("Cartão de crédito não encontrado."));
   }
 

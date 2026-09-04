@@ -12,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -59,6 +60,11 @@ public class ApiExceptionHandler {
         "Requisição inválida",
         "O conteúdo enviado não pôde ser interpretado.",
         request);
+  }
+
+  @ExceptionHandler(BadCredentialsException.class)
+  ProblemDetail handleBadCredentials(BadCredentialsException exception, HttpServletRequest request) {
+    return problem(HttpStatus.UNAUTHORIZED, "Credenciais inválidas", exception.getMessage(), request);
   }
 
   @ExceptionHandler(DataIntegrityViolationException.class)

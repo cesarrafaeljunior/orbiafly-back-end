@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.orbiafly.api.support.TestCurrentUserConfig;
 import java.util.HashMap;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
@@ -20,12 +21,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
+@Import(TestCurrentUserConfig.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class CreditCardApiTests {
@@ -41,6 +44,8 @@ class CreditCardApiTests {
 
   @BeforeEach
   void cleanCreditCards() {
+    jdbcTemplate.update("DELETE FROM installment_expense_installment");
+    jdbcTemplate.update("DELETE FROM installment_purchase");
     jdbcTemplate.update("DELETE FROM credit_card");
   }
 

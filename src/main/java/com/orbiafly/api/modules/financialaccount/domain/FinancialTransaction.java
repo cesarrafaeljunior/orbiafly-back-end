@@ -1,5 +1,6 @@
 package com.orbiafly.api.modules.financialaccount.domain;
 
+import com.orbiafly.api.modules.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,6 +25,10 @@ public class FinancialTransaction {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "financial_account_id", nullable = false)
   private FinancialAccount financialAccount;
+
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User owner;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "transaction_type", nullable = false, length = 20)
@@ -67,6 +72,7 @@ public class FinancialTransaction {
       Instant createdAt) {
     this.id = UUID.randomUUID();
     this.financialAccount = financialAccount;
+    this.owner = financialAccount.getOwner();
     this.type = type;
     this.amount = amount;
     this.description = description;
@@ -83,6 +89,10 @@ public class FinancialTransaction {
 
   public FinancialAccount getFinancialAccount() {
     return financialAccount;
+  }
+
+  public User getOwner() {
+    return owner;
   }
 
   public FinancialTransactionType getType() {

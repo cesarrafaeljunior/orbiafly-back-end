@@ -1,5 +1,6 @@
 package com.orbiafly.api.modules.fixedexpense.domain;
 
+import com.orbiafly.api.modules.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -23,6 +24,10 @@ public class FixedExpenseOccurrence {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "fixed_expense_id", nullable = false)
   private FixedExpense fixedExpense;
+
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User owner;
 
   @Column(name = "occurrence_year", nullable = false)
   private int year;
@@ -96,6 +101,10 @@ public class FixedExpenseOccurrence {
 
   public FixedExpense getFixedExpense() {
     return fixedExpense;
+  }
+
+  public User getOwner() {
+    return owner;
   }
 
   public int getYear() {

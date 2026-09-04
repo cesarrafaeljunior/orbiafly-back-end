@@ -1,5 +1,6 @@
 package com.orbiafly.api.modules.fixedexpense.domain;
 
+import com.orbiafly.api.modules.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -17,6 +18,10 @@ public class FixedExpense {
 
   @Id
   private UUID id;
+
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User owner;
 
   @Column(nullable = false, length = 120)
   private String name;
@@ -44,12 +49,14 @@ public class FixedExpense {
   }
 
   public FixedExpense(
+      User owner,
       String name,
       BigDecimal defaultAmount,
       int dueDay,
       Category category,
       Instant now) {
     this.id = UUID.randomUUID();
+    this.owner = owner;
     this.name = name;
     this.defaultAmount = defaultAmount;
     this.dueDay = dueDay;
@@ -76,6 +83,10 @@ public class FixedExpense {
 
   public UUID getId() {
     return id;
+  }
+
+  public User getOwner() {
+    return owner;
   }
 
   public String getName() {
