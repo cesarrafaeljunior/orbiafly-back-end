@@ -40,5 +40,14 @@ management:
 app:
   time-zone: ${APP_TIME_ZONE:America/Sao_Paulo}
 
+  admin:
+    email: ${APP_ADMIN_EMAIL:admin@admin.com.br}
+    username: ${APP_ADMIN_USERNAME:admin}
+    password: ${APP_ADMIN_PASSWORD:admin}
+
+  security:
+    jwt-secret: ${APP_JWT_SECRET:local-development-secret-change-me}
+    jwt-expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:480}
+
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:4201,http://127.0.0.1:4200,http://127.0.0.1:4201}

@@ -36,6 +36,9 @@ public class CreditCard {
   @Column(name = "due_day", nullable = false)
   private int dueDay;
 
+  @Column(name = "owner_user_id", nullable = false)
+  private UUID ownerUserId;
+
   @Column(nullable = false)
   private boolean active;
 
@@ -58,6 +61,7 @@ public class CreditCard {
       BigDecimal totalLimit,
       int closingDay,
       int dueDay,
+      UUID ownerUserId,
       Instant now) {
     this.id = UUID.randomUUID();
     this.name = name;
@@ -66,6 +70,7 @@ public class CreditCard {
     this.totalLimit = totalLimit;
     this.closingDay = closingDay;
     this.dueDay = dueDay;
+    this.ownerUserId = ownerUserId;
     this.active = true;
     this.createdAt = now;
     this.updatedAt = now;
@@ -130,6 +135,10 @@ public class CreditCard {
 
   public int getDueDay() {
     return dueDay;
+  }
+
+  public UUID getOwnerUserId() {
+    return ownerUserId;
   }
 
   public boolean isActive() {

@@ -31,6 +31,9 @@ public class FixedExpense {
   @JoinColumn(name = "category_id", nullable = false)
   private Category category;
 
+  @Column(name = "owner_user_id", nullable = false)
+  private UUID ownerUserId;
+
   @Column(nullable = false)
   private boolean active;
 
@@ -48,12 +51,14 @@ public class FixedExpense {
       BigDecimal defaultAmount,
       int dueDay,
       Category category,
+      UUID ownerUserId,
       Instant now) {
     this.id = UUID.randomUUID();
     this.name = name;
     this.defaultAmount = defaultAmount;
     this.dueDay = dueDay;
     this.category = category;
+    this.ownerUserId = ownerUserId;
     this.active = true;
     this.createdAt = now;
     this.updatedAt = now;
@@ -92,6 +97,10 @@ public class FixedExpense {
 
   public Category getCategory() {
     return category;
+  }
+
+  public UUID getOwnerUserId() {
+    return ownerUserId;
   }
 
   public boolean isActive() {

@@ -1,11 +1,13 @@
 package com.orbiafly.api.modules.creditcard.application.service;
 
+import com.orbiafly.api.infrastructure.security.CurrentUserProvider;
 import com.orbiafly.api.modules.creditcard.application.contract.CreditCardServiceInterface;
 import com.orbiafly.api.modules.creditcard.application.factory.CreditCardResultFactory;
 import com.orbiafly.api.modules.creditcard.application.model.CreditCardOverviewResult;
 import com.orbiafly.api.modules.creditcard.application.model.CreditCardResult;
 import com.orbiafly.api.modules.creditcard.domain.CreditCard;
 import com.orbiafly.api.modules.creditcard.domain.CreditCardBrand;
+import com.orbiafly.api.modules.creditcard.infrastructure.persistence.CreditCardPurchaseRepositoryInterface;
 import com.orbiafly.api.modules.creditcard.infrastructure.persistence.CreditCardRepositoryInterface;
 import com.orbiafly.api.modules.creditcard.web.dto.response.CreditCardOverviewResponseDTO;
 import com.orbiafly.api.modules.creditcard.web.dto.response.CreditCardResponseDTO;
@@ -15,7 +17,9 @@ import com.orbiafly.api.modules.fixedexpense.application.ResourceNotFoundExcepti
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,32 +28,43 @@ import org.springframework.transaction.annotation.Transactional;
 public class CreditCardServiceImpl implements CreditCardServiceInterface {
 
   private final CreditCardRepositoryInterface cardRepository;
+  private final CreditCardPurchaseRepositoryInterface purchaseRepository;
   private final CreditCardResultFactory cardResultFactory;
   private final CreditCardResponseDTOFactory cardResponseDTOFactory;
   private final CreditCardOverviewResponseDTOFactory overviewResponseDTOFactory;
+  private final CurrentUserProvider currentUserProvider;
   private final Clock clock;
 
   public CreditCardServiceImpl(
       CreditCardRepositoryInterface cardRepository,
+      CreditCardPurchaseRepositoryInterface purchaseRepository,
       CreditCardResultFactory cardResultFactory,
       CreditCardResponseDTOFactory cardResponseDTOFactory,
       CreditCardOverviewResponseDTOFactory overviewResponseDTOFactory,
+      CurrentUserProvider currentUserProvider,
       Clock clock) {
     this.cardRepository = cardRepository;
+    this.purchaseRepository = purchaseRepository;
     this.cardResultFactory = cardResultFactory;
     this.cardResponseDTOFactory = cardResponseDTOFactory;
     this.overviewResponseDTOFactory = overviewResponseDTOFactory;
+    this.currentUserProvider = currentUserProvider;
     this.clock = clock;
   }
 
   @Override
   @Transactional(readOnly = true)
   public CreditCardOverviewResponseDTO listCreditCards(boolean includeInactive) {
+    UUID ownerUserId = currentUserProvider.currentUserId();
     List<CreditCard> cards = includeInactive
-        ? cardRepository.findAllByDeletedAtIsNullOrderByActiveDescNameAsc()
-        : cardRepository.findAllByActiveTrueAndDeletedAtIsNullOrderByNameAsc();
+        ? cardRepository.findAllByOwnerUserIdAndDeletedAtIsNullOrderByActiveDescNameAsc(ownerUserId)
+        : cardRepository.findAllByOwnerUserIdAndActiveTrueAndDeletedAtIsNullOrderByNameAsc(
+            ownerUserId);
+    Map<UUID, BigDecimal> committedAmounts = committedAmounts(cards, ownerUserId);
     List<CreditCardResult> views = cards.stream()
-        .map(cardResultFactory::createCreditCardResult)
+        .map(card -> cardResultFactory.createCreditCardResult(
+            card,
+            committedAmounts.getOrDefault(card.getId(), BigDecimal.ZERO)))
         .toList();
     BigDecimal totalLimit = views.stream()
         .filter(CreditCardResult::active)
@@ -72,8 +87,11 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
   @Override
   @Transactional(readOnly = true)
   public CreditCardResponseDTO getCreditCard(UUID id) {
-    return cardRepository.findByIdAndDeletedAtIsNull(id)
-        .map(cardResultFactory::createCreditCardResult)
+    UUID ownerUserId = currentUserProvider.currentUserId();
+    return cardRepository.findByIdAndOwnerUserIdAndDeletedAtIsNull(id, ownerUserId)
+        .map(card -> cardResultFactory.createCreditCardResult(
+            card,
+            purchaseRepository.findCommittedAmountByCardId(card.getId(), ownerUserId)))
         .map(cardResponseDTOFactory::createCreditCardResponseDTO)
         .orElseThrow(() -> new ResourceNotFoundException("Cartão de crédito não encontrado."));
   }
@@ -96,9 +114,10 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
         totalLimit,
         closingDay,
         dueDay,
+        currentUserProvider.currentUserId(),
         now);
     return cardResponseDTOFactory.createCreditCardResponseDTO(
-        cardResultFactory.createCreditCardResult(cardRepository.save(card)));
+        cardResultFactory.createCreditCardResult(cardRepository.save(card), BigDecimal.ZERO));
   }
 
   @Override
@@ -122,7 +141,11 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
         dueDay,
         clock.instant());
     return cardResponseDTOFactory.createCreditCardResponseDTO(
-        cardResultFactory.createCreditCardResult(card));
+        cardResultFactory.createCreditCardResult(
+            card,
+            purchaseRepository.findCommittedAmountByCardId(
+                card.getId(),
+                card.getOwnerUserId())));
   }
 
   @Override
@@ -131,7 +154,11 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
     CreditCard card = findCardForUpdate(id);
     card.deactivate(clock.instant());
     return cardResponseDTOFactory.createCreditCardResponseDTO(
-        cardResultFactory.createCreditCardResult(card));
+        cardResultFactory.createCreditCardResult(
+            card,
+            purchaseRepository.findCommittedAmountByCardId(
+                card.getId(),
+                card.getOwnerUserId())));
   }
 
   @Override
@@ -140,7 +167,11 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
     CreditCard card = findCardForUpdate(id);
     card.reactivateCreditCard(clock.instant());
     return cardResponseDTOFactory.createCreditCardResponseDTO(
-        cardResultFactory.createCreditCardResult(card));
+        cardResultFactory.createCreditCardResult(
+            card,
+            purchaseRepository.findCommittedAmountByCardId(
+                card.getId(),
+                card.getOwnerUserId())));
   }
 
   @Override
@@ -151,8 +182,19 @@ public class CreditCardServiceImpl implements CreditCardServiceInterface {
   }
 
   private CreditCard findCardForUpdate(UUID id) {
-    return cardRepository.findByIdForUpdate(id)
+    return cardRepository.findByIdAndOwnerUserIdForUpdate(id, currentUserProvider.currentUserId())
         .orElseThrow(() -> new ResourceNotFoundException("Cartão de crédito não encontrado."));
+  }
+
+  private Map<UUID, BigDecimal> committedAmounts(List<CreditCard> cards, UUID ownerUserId) {
+    if (cards.isEmpty()) {
+      return Map.of();
+    }
+    List<UUID> cardIds = cards.stream().map(CreditCard::getId).toList();
+    Map<UUID, BigDecimal> amounts = new HashMap<>();
+    purchaseRepository.findCommittedAmountsByCardIds(cardIds, ownerUserId).forEach(row ->
+        amounts.put((UUID) row[0], (BigDecimal) row[1]));
+    return amounts;
   }
 
   private void validateTotalLimit(BigDecimal totalLimit) {

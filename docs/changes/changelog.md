@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-31
+
+- Implementadas compras parceladas no cartao com `CreditCardPurchase` e `CreditCardInstallment`.
+- Adicionada a migration `V5__credit_card_purchases.sql`.
+- Limite utilizado e disponivel dos cartoes passaram a considerar o valor total das compras parceladas nao excluidas.
+- Adicionados endpoints `/api/v1/credit-card-purchases` para overview, listagem, detalhe, criacao e exclusao logica.
+- Cobertos cenarios de parcelamento, arredondamento, ciclo por fechamento, limite insuficiente, cartao inativo e soft delete.
+- Implementado o modulo de emprestimos com direcoes `BORROWED` e `LENT`.
+- Adicionada a migration `V6__loans.sql`, com `loan`, `loan_installment`, `loan_entry` e referencia financeira `LOAN_ENTRY`.
+- Adicionados endpoints `/api/v1/loans` para overview, detalhe, criacao, lancamento e soft delete.
+- Pagamentos de emprestimos tomados geram debito em conta; recebimentos de emprestimos cedidos geram credito em conta.
+
 ## 2026-08-26
 
 - Refatorada a arquitetura interna dos modulos de dashboard, contas financeiras e despesas fixas.

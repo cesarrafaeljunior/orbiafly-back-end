@@ -57,6 +57,14 @@ public interface FinancialAccountServiceInterface {
       FinancialReferenceType referenceType,
       UUID referenceId);
 
+  AccountTransactionResult creditFinancialAccountForReference(
+      UUID accountId,
+      BigDecimal amount,
+      String description,
+      LocalDate occurredOn,
+      FinancialReferenceType referenceType,
+      UUID referenceId);
+
   AccountTransactionResult reverseFinancialAccountDebit(
       UUID transactionId, LocalDate occurredOn, String description);
 

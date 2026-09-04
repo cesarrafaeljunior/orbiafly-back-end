@@ -1,5 +1,6 @@
 package com.orbiafly.api.modules.fixedexpense.application.service;
 
+import com.orbiafly.api.infrastructure.security.CurrentUserProvider;
 import com.orbiafly.api.modules.financialaccount.application.contract.FinancialAccountServiceInterface;
 import com.orbiafly.api.modules.financialaccount.application.model.AccountTransactionResult;
 import com.orbiafly.api.modules.financialaccount.application.model.FinancialAccountResult;
@@ -66,6 +67,7 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
   private final MonthlyExpenseResponseDTOFactory monthlyExpenseResponseDTOFactory;
   private final MonthlyExpensesResponseDTOFactory monthlyExpensesResponseDTOFactory;
   private final FixedExpensePaymentResponseDTOFactory paymentResponseDTOFactory;
+  private final CurrentUserProvider currentUserProvider;
   private final Clock clock;
 
   public FixedExpenseServiceImpl(
@@ -81,6 +83,7 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
       MonthlyExpenseResponseDTOFactory monthlyExpenseResponseDTOFactory,
       MonthlyExpensesResponseDTOFactory monthlyExpensesResponseDTOFactory,
       FixedExpensePaymentResponseDTOFactory paymentResponseDTOFactory,
+      CurrentUserProvider currentUserProvider,
       Clock clock) {
     this.categoryRepository = categoryRepository;
     this.fixedExpenseRepository = fixedExpenseRepository;
@@ -94,6 +97,7 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
     this.monthlyExpenseResponseDTOFactory = monthlyExpenseResponseDTOFactory;
     this.monthlyExpensesResponseDTOFactory = monthlyExpensesResponseDTOFactory;
     this.paymentResponseDTOFactory = paymentResponseDTOFactory;
+    this.currentUserProvider = currentUserProvider;
     this.clock = clock;
   }
 
@@ -109,7 +113,9 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
   @Override
   @Transactional(readOnly = true)
   public List<FixedExpenseResponseDTO> listFixedExpenses() {
-    return fixedExpenseRepository.findAllByOrderByNameAsc().stream()
+    return fixedExpenseRepository.findAllByOwnerUserIdOrderByNameAsc(
+            currentUserProvider.currentUserId())
+        .stream()
         .map(fixedExpenseResultFactory::createFixedExpenseResult)
         .map(fixedExpenseResponseDTOFactory::createFixedExpenseResponseDTO)
         .toList();
@@ -129,6 +135,7 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
         defaultAmount,
         dueDay,
         category,
+        currentUserProvider.currentUserId(),
         now);
     FixedExpenseResult result = fixedExpenseResultFactory.createFixedExpenseResult(
         fixedExpenseRepository.save(expense));
@@ -160,11 +167,12 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
   @Transactional
   public MonthlyExpensesResponseDTO getMonthlyFixedExpenses(int year, int month) {
     validatePeriod(year, month);
-    occurrenceRepository.materializeActiveExpenses(year, month);
+    UUID ownerUserId = currentUserProvider.currentUserId();
+    occurrenceRepository.materializeActiveExpenses(ownerUserId, year, month);
     MonthlyExpensesResult result = createMonthlyExpensesResult(
         year,
         month,
-        occurrenceRepository.findMonthly(year, month));
+        occurrenceRepository.findMonthly(ownerUserId, year, month));
     return monthlyExpensesResponseDTOFactory.createMonthlyExpensesResponseDTO(result);
   }
 
@@ -258,12 +266,14 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
   }
 
   private FixedExpense findExpense(UUID id) {
-    return fixedExpenseRepository.findById(id)
+    return fixedExpenseRepository.findByIdAndOwnerUserId(id, currentUserProvider.currentUserId())
         .orElseThrow(() -> new ResourceNotFoundException("Despesa fixa não encontrada."));
   }
 
   private FixedExpenseOccurrence findOccurrenceForUpdate(UUID id) {
-    return occurrenceRepository.findByIdForUpdate(id)
+    return occurrenceRepository.findByIdAndOwnerUserIdForUpdate(
+            id,
+            currentUserProvider.currentUserId())
         .orElseThrow(() -> new ResourceNotFoundException("Ocorrência mensal não encontrada."));
   }
 

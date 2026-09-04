@@ -45,6 +45,9 @@ public class FixedExpenseOccurrence {
   @Column(name = "category_name", nullable = false, length = 80)
   private String categoryName;
 
+  @Column(name = "owner_user_id", nullable = false)
+  private UUID ownerUserId;
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   private PaymentStatus status;
@@ -124,6 +127,10 @@ public class FixedExpenseOccurrence {
 
   public String getCategoryName() {
     return categoryName;
+  }
+
+  public UUID getOwnerUserId() {
+    return ownerUserId;
   }
 
   public PaymentStatus getStatus() {

@@ -28,6 +28,16 @@ Valores usam `NUMERIC(15, 2)`. Constraints validam tipos de conta e movimentacao
 
 O saldo nao possui coluna mutavel: e calculado como `opening_balance + SUM(balance_effect)`. Debitos armazenam valor positivo e produzem efeito negativo; creditos produzem efeito positivo; ajustes armazenam diferenca assinada.
 
+`V6__loans.sql` amplia `financial_transaction.reference_type` para aceitar `LOAN_ENTRY` e cria:
+
+- `loan`, com direcao, contraparte, valor total, data inicial, dados opcionais de parcelamento, taxa informativa, notas, status, soft delete e timestamps;
+- `loan_installment`, com numero, valor, vencimento, status e data de conclusao;
+- `loan_entry`, com valor, data, conta financeira e movimentacao financeira vinculada.
+
+Valores usam `NUMERIC(15, 2)`. Constraints validam direcoes `BORROWED` e `LENT`, status `ACTIVE` e `COMPLETED`, consistencia entre campos de parcelamento e status das parcelas.
+
+Pagamentos de emprestimos tomados geram `DEBIT`; recebimentos de emprestimos cedidos geram `CREDIT`. Ambos ficam vinculados por `reference_type = 'LOAN_ENTRY'` e `reference_id`.
+
 Nenhuma migration foi necessaria para a evolucao visual e contratual de Despesas Fixas em 2026-08-27, porque os novos campos sao derivados de dados ja persistidos.
 
 `V4__credit_cards.sql` cria:
@@ -36,7 +46,16 @@ Nenhuma migration foi necessaria para a evolucao visual e contratual de Despesas
 
 Valores usam `NUMERIC(15, 2)`. Constraints validam bandeiras aceitas, ultimos quatro digitos quando informados, limite nao negativo e dias entre 1 e 31. O indice parcial atende listagem por atividade e nome somente para cartoes nao excluidos.
 
-Limite utilizado e limite disponivel nao sao persistidos nesta versao. Eles sao derivados pela camada de aplicacao; enquanto compras nao existirem, o utilizado e zero e o disponivel e igual ao limite total.
+Limite utilizado e limite disponivel nao sao persistidos. Eles sao derivados pela camada de aplicacao a partir de compras parceladas nao excluidas.
+
+`V5__credit_card_purchases.sql` cria:
+
+- `credit_card_purchase`, com descricao, valor total, data da compra, quantidade de parcelas, valor base da parcela, vinculo ao cartao, soft delete e timestamps;
+- `credit_card_installment`, com numero da parcela, valor, competencia, vencimento, status e timestamp.
+
+Valores usam `NUMERIC(15, 2)`. Constraints validam valor positivo, quantidade minima de parcelas, competencia mensal e status `PENDING`. A unicidade `(purchase_id, installment_number)` impede duplicidade de parcelas da mesma compra. Indices atendem consultas por cartao e competencias futuras.
+
+O limite comprometido soma o valor total das compras parceladas nao excluidas. As parcelas sao geradas pelo backend no cadastro da compra; o vencimento mensal respeita o dia de vencimento do cartao, limitado ao ultimo dia valido do mes.
 
 ## Convencoes futuras
 

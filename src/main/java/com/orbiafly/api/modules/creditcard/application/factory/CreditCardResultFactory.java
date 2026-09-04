@@ -8,8 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class CreditCardResultFactory {
 
-  public CreditCardResult createCreditCardResult(CreditCard card) {
-    BigDecimal usedLimit = BigDecimal.ZERO;
+  public CreditCardResult createCreditCardResult(CreditCard card, BigDecimal usedLimit) {
     return new CreditCardResult(
         card.getId(),
         card.getName(),

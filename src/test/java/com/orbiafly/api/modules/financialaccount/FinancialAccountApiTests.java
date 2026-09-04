@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.orbiafly.api.AuthenticatedUserTestConfiguration;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,12 +25,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
+@Import(AuthenticatedUserTestConfiguration.class)
 class FinancialAccountApiTests {
 
   @Autowired
@@ -43,6 +46,9 @@ class FinancialAccountApiTests {
 
   @BeforeEach
   void cleanFinancialData() {
+    jdbcTemplate.update("DELETE FROM loan_entry");
+    jdbcTemplate.update("DELETE FROM loan_installment");
+    jdbcTemplate.update("DELETE FROM loan");
     jdbcTemplate.update("DELETE FROM fixed_expense_occurrence");
     jdbcTemplate.update("DELETE FROM fixed_expense");
     jdbcTemplate.update("DELETE FROM financial_transaction");

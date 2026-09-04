@@ -1,5 +1,6 @@
 package com.orbiafly.api.modules.financialaccount.application.service;
 
+import com.orbiafly.api.infrastructure.security.CurrentUserProvider;
 import com.orbiafly.api.modules.financialaccount.application.contract.FinancialAccountServiceInterface;
 import com.orbiafly.api.modules.financialaccount.application.factory.FinancialAccountResultFactory;
 import com.orbiafly.api.modules.financialaccount.application.factory.FinancialTransactionResultFactory;
@@ -50,6 +51,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
   private final FinancialTransactionResponseDTOFactory transactionResponseDTOFactory;
   private final AccountTransactionResponseDTOFactory accountTransactionResponseDTOFactory;
   private final FixedExpenseOccurrenceRepositoryInterface occurrenceRepository;
+  private final CurrentUserProvider currentUserProvider;
   private final Clock clock;
 
   public FinancialAccountServiceImpl(
@@ -62,6 +64,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
       FinancialTransactionResponseDTOFactory transactionResponseDTOFactory,
       AccountTransactionResponseDTOFactory accountTransactionResponseDTOFactory,
       FixedExpenseOccurrenceRepositoryInterface occurrenceRepository,
+      CurrentUserProvider currentUserProvider,
       Clock clock) {
     this.accountRepository = accountRepository;
     this.transactionRepository = transactionRepository;
@@ -72,16 +75,18 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
     this.transactionResponseDTOFactory = transactionResponseDTOFactory;
     this.accountTransactionResponseDTOFactory = accountTransactionResponseDTOFactory;
     this.occurrenceRepository = occurrenceRepository;
+    this.currentUserProvider = currentUserProvider;
     this.clock = clock;
   }
 
   @Override
   @Transactional(readOnly = true)
   public FinancialAccountsOverviewResponseDTO listFinancialAccounts(boolean includeInactive) {
+    UUID ownerUserId = currentUserProvider.currentUserId();
     List<FinancialAccount> accounts = includeInactive
-        ? accountRepository.findAllByOrderByActiveDescNameAsc()
-        : accountRepository.findAllByActiveTrueOrderByNameAsc();
-    Map<UUID, BigDecimal> deltas = balanceDeltas();
+        ? accountRepository.findAllByOwnerUserIdOrderByActiveDescNameAsc(ownerUserId)
+        : accountRepository.findAllByOwnerUserIdAndActiveTrueOrderByNameAsc(ownerUserId);
+    Map<UUID, BigDecimal> deltas = balanceDeltas(ownerUserId);
     List<FinancialAccountResult> views = accounts.stream()
         .map(account -> accountResultFactory.createFinancialAccountResult(
             account,
@@ -128,6 +133,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
         type,
         normalizeOptional(institution),
         openingBalance,
+        currentUserProvider.currentUserId(),
         now);
     FinancialAccountResult result = accountResultFactory.createFinancialAccountResult(
         accountRepository.save(account),
@@ -185,9 +191,12 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
     }
     occurrenceRepository.unlinkFinancialAccountPayments(
         account.getId(),
+        account.getOwnerUserId(),
         PaymentStatus.PENDING,
         clock.instant());
-    transactionRepository.deleteAllByFinancialAccountId(account.getId());
+    transactionRepository.deleteAllByFinancialAccountIdAndOwnerUserId(
+        account.getId(),
+        account.getOwnerUserId());
     accountRepository.delete(account);
   }
 
@@ -196,7 +205,9 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
   public List<FinancialTransactionResponseDTO> listFinancialAccountTransactions(UUID accountId) {
     findAccount(accountId);
     return transactionRepository
-        .findAllByFinancialAccountIdOrderByOccurredOnDescCreatedAtDesc(accountId)
+        .findAllByOwnerUserIdAndFinancialAccountIdOrderByOccurredOnDescCreatedAtDesc(
+            currentUserProvider.currentUserId(),
+            accountId)
         .stream()
         .map(transactionResultFactory::createFinancialTransactionResult)
         .map(transactionResponseDTOFactory::createFinancialTransactionResponseDTO)
@@ -223,6 +234,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
         LocalDate.now(clock),
         null,
         null,
+        account.getOwnerUserId(),
         null,
         clock.instant());
     transactionRepository.saveAndFlush(transaction);
@@ -256,6 +268,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
         occurredOn,
         referenceType,
         referenceId,
+        account.getOwnerUserId(),
         null,
         clock.instant());
     transactionRepository.saveAndFlush(transaction);
@@ -267,11 +280,46 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
 
   @Override
   @Transactional
+  public AccountTransactionResult creditFinancialAccountForReference(
+      UUID accountId,
+      BigDecimal amount,
+      String description,
+      LocalDate occurredOn,
+      FinancialReferenceType referenceType,
+      UUID referenceId) {
+    if (amount.signum() < 0) {
+      throw new IllegalArgumentException("O valor do recebimento não pode ser negativo.");
+    }
+    FinancialAccount account = findAccountForUpdate(accountId);
+    if (!account.isActive()) {
+      throw new IllegalStateException("A conta selecionada está desativada.");
+    }
+    FinancialTransaction transaction = new FinancialTransaction(
+        account,
+        FinancialTransactionType.CREDIT,
+        amount,
+        normalizeRequired(description),
+        occurredOn,
+        referenceType,
+        referenceId,
+        account.getOwnerUserId(),
+        null,
+        clock.instant());
+    transactionRepository.saveAndFlush(transaction);
+    return new AccountTransactionResult(
+        accountResultFactory.createFinancialAccountResult(account, currentBalance(account)),
+        transactionResultFactory.createFinancialTransactionResult(transaction));
+  }
+
+  @Override
+  @Transactional
   public AccountTransactionResult reverseFinancialAccountDebit(
       UUID transactionId,
       LocalDate occurredOn,
       String description) {
-    FinancialTransaction original = transactionRepository.findByIdForUpdate(transactionId)
+    FinancialTransaction original = transactionRepository.findByIdAndOwnerUserIdForUpdate(
+            transactionId,
+            currentUserProvider.currentUserId())
         .orElseThrow(() -> new ResourceNotFoundException("Movimentação de pagamento não encontrada."));
     if (original.getType() != FinancialTransactionType.DEBIT) {
       throw new IllegalStateException("Somente movimentações de débito podem ser revertidas.");
@@ -288,6 +336,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
         occurredOn,
         original.getReferenceType(),
         original.getReferenceId(),
+        account.getOwnerUserId(),
         original,
         clock.instant());
     transactionRepository.saveAndFlush(reversal);
@@ -299,7 +348,9 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
   @Override
   @Transactional(readOnly = true)
   public FinancialTransactionResult getFinancialTransaction(UUID id) {
-    return transactionRepository.findById(id)
+    return transactionRepository.findByIdAndOwnerUserIdForUpdate(
+            id,
+            currentUserProvider.currentUserId())
         .map(transactionResultFactory::createFinancialTransactionResult)
         .orElseThrow(() -> new ResourceNotFoundException("Movimentação não encontrada."));
   }
@@ -307,7 +358,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
   @Override
   @Transactional(readOnly = true)
   public boolean hasActiveFinancialAccounts() {
-    return accountRepository.existsByActiveTrue();
+    return accountRepository.existsByOwnerUserIdAndActiveTrue(currentUserProvider.currentUserId());
   }
 
   @Override
@@ -316,22 +367,26 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
     if (ids.isEmpty()) {
       return Map.of();
     }
+    UUID ownerUserId = currentUserProvider.currentUserId();
     return accountRepository.findAllById(ids).stream()
+        .filter(account -> account.getOwnerUserId().equals(ownerUserId))
         .collect(Collectors.toMap(FinancialAccount::getId, FinancialAccount::getName));
   }
 
   private FinancialAccount findAccount(UUID id) {
-    return accountRepository.findById(id)
+    return accountRepository.findByIdAndOwnerUserId(id, currentUserProvider.currentUserId())
         .orElseThrow(() -> new ResourceNotFoundException("Conta financeira não encontrada."));
   }
 
   private FinancialAccount findAccountForUpdate(UUID id) {
-    return accountRepository.findByIdForUpdate(id)
+    return accountRepository.findByIdAndOwnerUserIdForUpdate(id, currentUserProvider.currentUserId())
         .orElseThrow(() -> new ResourceNotFoundException("Conta financeira não encontrada."));
   }
 
   private BigDecimal currentBalance(FinancialAccount account) {
-    return account.getOpeningBalance().add(transactionRepository.findBalanceDelta(account.getId()));
+    return account.getOpeningBalance().add(transactionRepository.findBalanceDelta(
+        account.getId(),
+        account.getOwnerUserId()));
   }
 
   private BigDecimal currentBalance(
@@ -340,9 +395,9 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
     return account.getOpeningBalance().add(deltas.getOrDefault(account.getId(), BigDecimal.ZERO));
   }
 
-  private Map<UUID, BigDecimal> balanceDeltas() {
+  private Map<UUID, BigDecimal> balanceDeltas(UUID ownerUserId) {
     Map<UUID, BigDecimal> deltas = new HashMap<>();
-    transactionRepository.findBalanceDeltas().forEach(projection ->
+    transactionRepository.findBalanceDeltas(ownerUserId).forEach(projection ->
         deltas.put(projection.getAccountId(), projection.getBalanceDelta()));
     return deltas;
   }

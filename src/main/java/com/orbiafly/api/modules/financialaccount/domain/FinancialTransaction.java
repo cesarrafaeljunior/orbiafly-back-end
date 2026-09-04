@@ -45,6 +45,9 @@ public class FinancialTransaction {
   @Column(name = "reference_id")
   private UUID referenceId;
 
+  @Column(name = "owner_user_id", nullable = false)
+  private UUID ownerUserId;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "reversal_of_id")
   private FinancialTransaction reversalOf;
@@ -63,6 +66,7 @@ public class FinancialTransaction {
       LocalDate occurredOn,
       FinancialReferenceType referenceType,
       UUID referenceId,
+      UUID ownerUserId,
       FinancialTransaction reversalOf,
       Instant createdAt) {
     this.id = UUID.randomUUID();
@@ -73,6 +77,7 @@ public class FinancialTransaction {
     this.occurredOn = occurredOn;
     this.referenceType = referenceType;
     this.referenceId = referenceId;
+    this.ownerUserId = ownerUserId;
     this.reversalOf = reversalOf;
     this.createdAt = createdAt;
   }
@@ -107,6 +112,10 @@ public class FinancialTransaction {
 
   public UUID getReferenceId() {
     return referenceId;
+  }
+
+  public UUID getOwnerUserId() {
+    return ownerUserId;
   }
 
   public FinancialTransaction getReversalOf() {

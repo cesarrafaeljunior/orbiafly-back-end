@@ -12,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -23,6 +24,11 @@ public class ApiExceptionHandler {
   @ExceptionHandler(ResourceNotFoundException.class)
   ProblemDetail handleNotFound(ResourceNotFoundException exception, HttpServletRequest request) {
     return problem(HttpStatus.NOT_FOUND, "Recurso não encontrado", exception.getMessage(), request);
+  }
+
+  @ExceptionHandler(BadCredentialsException.class)
+  ProblemDetail handleBadCredentials(BadCredentialsException exception, HttpServletRequest request) {
+    return problem(HttpStatus.UNAUTHORIZED, "Credenciais inválidas", exception.getMessage(), request);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)

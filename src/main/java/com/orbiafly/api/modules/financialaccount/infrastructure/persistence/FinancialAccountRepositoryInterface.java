@@ -12,13 +12,17 @@ import org.springframework.data.repository.query.Param;
 
 public interface FinancialAccountRepositoryInterface extends JpaRepository<FinancialAccount, UUID> {
 
-  List<FinancialAccount> findAllByActiveTrueOrderByNameAsc();
+  List<FinancialAccount> findAllByOwnerUserIdAndActiveTrueOrderByNameAsc(UUID ownerUserId);
 
-  List<FinancialAccount> findAllByOrderByActiveDescNameAsc();
+  List<FinancialAccount> findAllByOwnerUserIdOrderByActiveDescNameAsc(UUID ownerUserId);
 
-  boolean existsByActiveTrue();
+  Optional<FinancialAccount> findByIdAndOwnerUserId(UUID id, UUID ownerUserId);
+
+  boolean existsByOwnerUserIdAndActiveTrue(UUID ownerUserId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("SELECT account FROM FinancialAccount account WHERE account.id = :id")
-  Optional<FinancialAccount> findByIdForUpdate(@Param("id") UUID id);
+  @Query("SELECT account FROM FinancialAccount account WHERE account.id = :id AND account.ownerUserId = :ownerUserId")
+  Optional<FinancialAccount> findByIdAndOwnerUserIdForUpdate(
+      @Param("id") UUID id,
+      @Param("ownerUserId") UUID ownerUserId);
 }

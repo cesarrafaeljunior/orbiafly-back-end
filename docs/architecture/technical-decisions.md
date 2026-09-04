@@ -76,6 +76,28 @@
 - Compras, parcelamentos, faturas, pagamento de fatura e integracao com contas financeiras foram adiados.
 - Regra futura registrada: compras parceladas devem comprometer o valor total da compra no limite no momento inicial.
 
+## ORB - Compras parceladas no cartao - 2026-08-31
+
+- `CreditCardPurchase` e `CreditCardInstallment` foram adicionados ao modulo de cartoes, mantendo `CreditCard` como agregador de limite e ciclo.
+- O cadastro de compra bloqueia o cartao e valida cartao ativo, nao excluido e limite disponivel suficiente antes de persistir.
+- Limite utilizado e disponivel continuam derivados; compras nao excluidas comprometem o valor total da compra.
+- Parcelas sao materializadas no cadastro para preservar competencia, vencimento e valor de cada parcela.
+- A regra de ciclo fica centralizada no backend: compras ate o fechamento usam a competencia da compra; compras apos o fechamento iniciam na competencia seguinte.
+- A divisao monetaria usa duas casas com arredondamento para baixo nas parcelas regulares e ajuste de centavos na ultima parcela.
+- A API expõe overview, listagem, detalhe, criacao e soft delete em `/api/v1/credit-card-purchases`.
+- Fatura, pagamento de fatura, juros, taxas, antecipacao, cartoes adicionais e notificacoes permanecem fora do escopo.
+
+## ORB - Emprestimos - 2026-08-31
+
+- `Loan` foi criado como modulo unico para dinheiro tomado e dinheiro emprestado, diferenciado por `LoanDirection`.
+- Contraparte permanece texto livre para evitar cadastro prematuro de pessoas e instituicoes.
+- Parcelas sao materializadas no cadastro somente quando ha cronograma definido; emprestimos sem cronograma aceitam lancamentos parciais.
+- Pagamentos e recebimentos usam `LoanEntry` como historico de dominio e `FinancialTransaction` como razao financeiro da conta.
+- A integracao com contas usa a fronteira publica de `FinancialAccountServiceInterface`; repositories de contas nao atravessam o modulo de emprestimos.
+- `FinancialReferenceType.LOAN_ENTRY` identifica movimentacoes geradas por emprestimos.
+- Saldo restante, progresso, proxima parcela, previsao de termino e status de quitado sao derivados de parcelas e lancamentos.
+- Cartao de credito, cobranca automatica, notificacoes, contratos, SAC/Price, renegociacao e juros compostos avancados permanecem fora do escopo.
+
 ## Refatoracao arquitetural de modulos - 2026-08-26
 
 - Controllers passam a ficar em `web/controller` e dependem somente de contratos em `application/contract`.

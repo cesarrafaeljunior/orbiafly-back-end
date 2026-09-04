@@ -30,6 +30,9 @@ public class FinancialAccount {
   @Column(name = "opening_balance", nullable = false, precision = 15, scale = 2)
   private BigDecimal openingBalance;
 
+  @Column(name = "owner_user_id", nullable = false)
+  private UUID ownerUserId;
+
   @Column(nullable = false)
   private boolean active;
 
@@ -47,12 +50,14 @@ public class FinancialAccount {
       FinancialAccountType type,
       String institution,
       BigDecimal openingBalance,
+      UUID ownerUserId,
       Instant now) {
     this.id = UUID.randomUUID();
     this.name = name;
     this.type = type;
     this.institution = institution;
     this.openingBalance = openingBalance;
+    this.ownerUserId = ownerUserId;
     this.active = true;
     this.createdAt = now;
     this.updatedAt = now;
@@ -101,6 +106,10 @@ public class FinancialAccount {
 
   public boolean isActive() {
     return active;
+  }
+
+  public UUID getOwnerUserId() {
+    return ownerUserId;
   }
 
   public Instant getCreatedAt() {
