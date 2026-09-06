@@ -79,8 +79,8 @@
 ## ORB - Compras parceladas no cartao - 2026-08-31
 
 - `CreditCardPurchase` e `CreditCardInstallment` foram adicionados ao modulo de cartoes, mantendo `CreditCard` como agregador de limite e ciclo.
-- O cadastro de compra bloqueia o cartao e valida cartao ativo, nao excluido e limite disponivel suficiente antes de persistir.
-- Limite utilizado e disponivel continuam derivados; compras nao excluidas comprometem o valor total da compra.
+- O cadastro de compra bloqueia o cartao e valida cartao ativo e nao excluido antes de persistir.
+- Limite utilizado e disponivel continuam derivados; compras nao excluidas comprometem o valor total da compra e o limite disponivel pode ficar negativo.
 - Parcelas sao materializadas no cadastro para preservar competencia, vencimento e valor de cada parcela.
 - A regra de ciclo fica centralizada no backend: compras ate o fechamento usam a competencia da compra; compras apos o fechamento iniciam na competencia seguinte.
 - A divisao monetaria usa duas casas com arredondamento para baixo nas parcelas regulares e ajuste de centavos na ultima parcela.

@@ -132,15 +132,21 @@ class CreditCardPurchaseApiTests {
   }
 
   @Test
-  void rejectsPurchaseWhenCardIsInactiveOrLimitIsInsufficient() throws Exception {
+  void allowsPurchaseAboveLimitAndKeepsAvailableLimitNegative() throws Exception {
     JsonNode card = createCard("XP", "VISA", "4567", 1000.00, 20, 5);
     String cardId = card.get("id").asText();
 
-    mockMvc.perform(post("/api/v1/credit-card-purchases")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(json(purchasePayload(cardId, "Celular", "1500.00", LocalDate.of(2027, 2, 1), 3))))
-        .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.detail").value("Limite disponível insuficiente para registrar a compra."));
+    createPurchase(cardId, "Celular", "1500.00", LocalDate.of(2027, 2, 1), 3);
+
+    JsonNode cardsOverview = getJson("/api/v1/credit-cards");
+    assertThat(cardsOverview.at("/cards/0/usedLimit").decimalValue()).isEqualByComparingTo("1500.00");
+    assertThat(cardsOverview.at("/cards/0/availableLimit").decimalValue()).isEqualByComparingTo("-500.00");
+  }
+
+  @Test
+  void rejectsPurchaseWhenCardIsInactive() throws Exception {
+    JsonNode card = createCard("XP", "VISA", "4567", 1000.00, 20, 5);
+    String cardId = card.get("id").asText();
 
     mockMvc.perform(patch("/api/v1/credit-cards/{id}/deactivate", cardId))
         .andExpect(status().isOk());

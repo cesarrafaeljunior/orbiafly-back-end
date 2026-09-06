@@ -167,13 +167,6 @@ public class CreditCardPurchaseServiceImpl implements CreditCardPurchaseServiceI
     if (!card.isActive()) {
       throw new IllegalStateException("O cartão selecionado está inativo.");
     }
-    BigDecimal committed = purchaseRepository.findCommittedAmountByCardId(
-        card.getId(),
-        ownerUserId);
-    if (committed.add(totalAmount).compareTo(card.getTotalLimit()) > 0) {
-      throw new IllegalStateException("Limite disponível insuficiente para registrar a compra.");
-    }
-
     Instant now = clock.instant();
     BigDecimal installmentAmount = regularInstallmentAmount(totalAmount, installmentCount);
     CreditCardPurchase purchase = new CreditCardPurchase(
