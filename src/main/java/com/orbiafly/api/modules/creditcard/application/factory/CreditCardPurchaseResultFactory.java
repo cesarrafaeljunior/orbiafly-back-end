@@ -4,6 +4,7 @@ import com.orbiafly.api.modules.creditcard.application.model.CreditCardInstallme
 import com.orbiafly.api.modules.creditcard.application.model.CreditCardPurchaseResult;
 import com.orbiafly.api.modules.creditcard.domain.CreditCardInstallment;
 import com.orbiafly.api.modules.creditcard.domain.CreditCardPurchase;
+import com.orbiafly.api.modules.creditcard.domain.CreditCardInstallmentStatus;
 import com.orbiafly.api.modules.creditcard.domain.CreditCardPurchaseStatus;
 import java.time.YearMonth;
 import java.util.Comparator;
@@ -30,6 +31,7 @@ public class CreditCardPurchaseResultFactory {
         .map(installmentResultFactory::createCreditCardInstallmentResult)
         .toList();
     List<CreditCardInstallment> futureInstallments = installments.stream()
+        .filter(installment -> installment.getStatus() == CreditCardInstallmentStatus.PENDING)
         .filter(installment -> !YearMonth.of(
             installment.getCompetenceYear(),
             installment.getCompetenceMonth()).isBefore(currentCompetence))
@@ -38,7 +40,10 @@ public class CreditCardPurchaseResultFactory {
         .findFirst()
         .map(installmentResultFactory::createCreditCardInstallmentResult)
         .orElse(null);
-    int futureCount = futureInstallments.size();
+    int paidCount = (int) installments.stream()
+        .filter(installment -> installment.getStatus() == CreditCardInstallmentStatus.PAID)
+        .count();
+    int pendingCount = installments.size() - paidCount;
 
     return new CreditCardPurchaseResult(
         purchase.getId(),
@@ -51,9 +56,9 @@ public class CreditCardPurchaseResultFactory {
         purchase.getCreditCard().getName(),
         purchase.getCreditCard().getBrand(),
         purchase.getCreditCard().getLastFourDigits(),
-        futureCount > 0 ? CreditCardPurchaseStatus.EM_ANDAMENTO : CreditCardPurchaseStatus.FINALIZADA,
-        purchase.getInstallmentCount() - futureCount,
-        futureCount,
+        pendingCount > 0 ? CreditCardPurchaseStatus.EM_ANDAMENTO : CreditCardPurchaseStatus.FINALIZADA,
+        paidCount,
+        pendingCount,
         nextInstallment,
         installmentResults,
         purchase.getDeletedAt(),

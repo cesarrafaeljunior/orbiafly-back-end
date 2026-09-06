@@ -15,5 +15,7 @@ public record CreditCardInstallmentResponseDTO(
     int competenceMonth,
     LocalDate dueDate,
     CreditCardInstallmentStatus status,
-    Instant createdAt) {
+    Instant paidAt,
+    Instant createdAt,
+    Instant updatedAt) {
 }

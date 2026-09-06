@@ -38,22 +38,26 @@ public interface CreditCardPurchaseRepositoryInterface
       @Param("ownerUserId") UUID ownerUserId);
 
   @Query("""
-      SELECT COALESCE(SUM(purchase.totalAmount), 0)
+      SELECT COALESCE(SUM(installment.amount), 0)
       FROM CreditCardPurchase purchase
+      JOIN purchase.installments installment
       WHERE purchase.creditCard.id = :cardId
         AND purchase.ownerUserId = :ownerUserId
         AND purchase.deletedAt IS NULL
+        AND installment.status = com.orbiafly.api.modules.creditcard.domain.CreditCardInstallmentStatus.PENDING
       """)
   BigDecimal findCommittedAmountByCardId(
       @Param("cardId") UUID cardId,
       @Param("ownerUserId") UUID ownerUserId);
 
   @Query("""
-      SELECT purchase.creditCard.id, COALESCE(SUM(purchase.totalAmount), 0)
+      SELECT purchase.creditCard.id, COALESCE(SUM(installment.amount), 0)
       FROM CreditCardPurchase purchase
+      JOIN purchase.installments installment
       WHERE purchase.creditCard.id IN :cardIds
         AND purchase.ownerUserId = :ownerUserId
         AND purchase.deletedAt IS NULL
+        AND installment.status = com.orbiafly.api.modules.creditcard.domain.CreditCardInstallmentStatus.PENDING
       GROUP BY purchase.creditCard.id
       """)
   List<Object[]> findCommittedAmountsByCardIds(

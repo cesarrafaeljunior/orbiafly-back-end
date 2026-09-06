@@ -10,6 +10,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -87,6 +88,15 @@ public class CreditCardPurchase {
 
   public void softDelete(Instant now) {
     this.deletedAt = now;
+    this.updatedAt = now;
+  }
+
+  public void refreshTotals(Instant now) {
+    this.totalAmount = installments.stream()
+        .map(CreditCardInstallment::getAmount)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+    this.installmentAmount = this.totalAmount
+        .divide(BigDecimal.valueOf(installmentCount), 2, RoundingMode.HALF_UP);
     this.updatedAt = now;
   }
 

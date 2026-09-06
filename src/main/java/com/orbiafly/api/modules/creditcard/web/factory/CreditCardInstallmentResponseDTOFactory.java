@@ -18,6 +18,8 @@ public class CreditCardInstallmentResponseDTOFactory {
         installment.competenceMonth(),
         installment.dueDate(),
         installment.status(),
-        installment.createdAt());
+        installment.paidAt(),
+        installment.createdAt(),
+        installment.updatedAt());
   }
 }

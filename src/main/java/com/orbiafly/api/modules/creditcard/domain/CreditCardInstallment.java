@@ -47,8 +47,14 @@ public class CreditCardInstallment {
   @Column(name = "owner_user_id", nullable = false)
   private UUID ownerUserId;
 
+  @Column(name = "paid_at")
+  private Instant paidAt;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
+
+  @Column(name = "updated_at", nullable = false)
+  private Instant updatedAt;
 
   protected CreditCardInstallment() {
   }
@@ -72,45 +78,41 @@ public class CreditCardInstallment {
     this.status = CreditCardInstallmentStatus.PENDING;
     this.ownerUserId = ownerUserId;
     this.createdAt = now;
+    this.updatedAt = now;
   }
 
-  public UUID getId() {
-    return id;
+  public void updateAmount(BigDecimal amount, Instant now) {
+    this.amount = amount;
+    this.updatedAt = now;
   }
 
-  public CreditCardPurchase getPurchase() {
-    return purchase;
+  public void updateStatus(CreditCardInstallmentStatus status, Instant now) {
+    this.status = status;
+    this.paidAt = status == CreditCardInstallmentStatus.PAID ? now : null;
+    this.updatedAt = now;
   }
 
-  public int getInstallmentNumber() {
-    return installmentNumber;
-  }
+  public UUID getId() { return id; }
 
-  public BigDecimal getAmount() {
-    return amount;
-  }
+  public CreditCardPurchase getPurchase() { return purchase; }
 
-  public int getCompetenceYear() {
-    return competenceYear;
-  }
+  public int getInstallmentNumber() { return installmentNumber; }
 
-  public int getCompetenceMonth() {
-    return competenceMonth;
-  }
+  public BigDecimal getAmount() { return amount; }
 
-  public LocalDate getDueDate() {
-    return dueDate;
-  }
+  public int getCompetenceYear() { return competenceYear; }
 
-  public CreditCardInstallmentStatus getStatus() {
-    return status;
-  }
+  public int getCompetenceMonth() { return competenceMonth; }
 
-  public UUID getOwnerUserId() {
-    return ownerUserId;
-  }
+  public LocalDate getDueDate() { return dueDate; }
 
-  public Instant getCreatedAt() {
-    return createdAt;
-  }
+  public CreditCardInstallmentStatus getStatus() { return status; }
+
+  public UUID getOwnerUserId() { return ownerUserId; }
+
+  public Instant getPaidAt() { return paidAt; }
+
+  public Instant getCreatedAt() { return createdAt; }
+
+  public Instant getUpdatedAt() { return updatedAt; }
 }

@@ -18,6 +18,8 @@ public class CreditCardInstallmentResultFactory {
         installment.getCompetenceMonth(),
         installment.getDueDate(),
         installment.getStatus(),
-        installment.getCreatedAt());
+        installment.getPaidAt(),
+        installment.getCreatedAt(),
+        installment.getUpdatedAt());
   }
 }
