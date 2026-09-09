@@ -19,6 +19,8 @@ import com.orbiafly.api.modules.fixedexpense.domain.PaymentStatus;
 import com.orbiafly.api.modules.fixedexpense.web.dto.response.MonthlyExpenseResponseDTO;
 import com.orbiafly.api.modules.fixedexpense.web.dto.response.MonthlyExpenseSummaryResponseDTO;
 import com.orbiafly.api.modules.fixedexpense.web.dto.response.MonthlyExpensesResponseDTO;
+import com.orbiafly.api.modules.oneoffexpense.application.contract.OneOffExpenseServiceInterface;
+import com.orbiafly.api.modules.oneoffexpense.web.dto.response.MonthlyOneOffExpensesResponseDTO;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -46,6 +48,8 @@ class DashboardServiceTests {
 
   @Mock
   private FinancialAccountServiceInterface financialAccountService;
+  @Mock
+  private OneOffExpenseServiceInterface oneOffExpenseService;
 
   @Mock
   private MonthlyFinancialProjectionServiceInterface projectionService;
@@ -62,9 +66,17 @@ class DashboardServiceTests {
     lenient().when(projectionService.getMonthlyProjectionResult(2026, 8)).thenReturn(projection(2026, 8));
     lenient().when(projectionService.getMonthlyProjectionResult(2026, 9)).thenReturn(projection(2026, 9));
     lenient().when(projectionService.getMonthlyProjectionResult(2026, 2)).thenReturn(projection(2026, 2));
+    for (int month : List.of(2, 8, 9)) {
+      lenient().when(oneOffExpenseService.getMonthlyOneOffExpenses(2026, month)).thenReturn(
+          new MonthlyOneOffExpensesResponseDTO(
+              2026, month, new MonthlyExpenseSummaryResponseDTO(
+                  BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, 0, BigDecimal.ZERO),
+              List.of()));
+    }
     dashboardService = new DashboardServiceImpl(
         fixedExpenseService,
         financialAccountService,
+        oneOffExpenseService,
         projectionService,
         new DashboardMonthlyResponseDTOFactory(new MonthlyFinancialProjectionResponseDTOFactory()),
         clock);

@@ -26,6 +26,7 @@ import com.orbiafly.api.modules.financialaccount.web.factory.FinancialTransactio
 import com.orbiafly.api.modules.fixedexpense.application.ResourceNotFoundException;
 import com.orbiafly.api.modules.fixedexpense.domain.PaymentStatus;
 import com.orbiafly.api.modules.fixedexpense.infrastructure.persistence.FixedExpenseOccurrenceRepositoryInterface;
+import com.orbiafly.api.modules.oneoffexpense.infrastructure.persistence.OneOffExpenseRepositoryInterface;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -51,6 +52,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
   private final FinancialTransactionResponseDTOFactory transactionResponseDTOFactory;
   private final AccountTransactionResponseDTOFactory accountTransactionResponseDTOFactory;
   private final FixedExpenseOccurrenceRepositoryInterface occurrenceRepository;
+  private final OneOffExpenseRepositoryInterface oneOffExpenseRepository;
   private final CurrentUserProvider currentUserProvider;
   private final Clock clock;
 
@@ -64,6 +66,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
       FinancialTransactionResponseDTOFactory transactionResponseDTOFactory,
       AccountTransactionResponseDTOFactory accountTransactionResponseDTOFactory,
       FixedExpenseOccurrenceRepositoryInterface occurrenceRepository,
+      OneOffExpenseRepositoryInterface oneOffExpenseRepository,
       CurrentUserProvider currentUserProvider,
       Clock clock) {
     this.accountRepository = accountRepository;
@@ -75,6 +78,7 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
     this.transactionResponseDTOFactory = transactionResponseDTOFactory;
     this.accountTransactionResponseDTOFactory = accountTransactionResponseDTOFactory;
     this.occurrenceRepository = occurrenceRepository;
+    this.oneOffExpenseRepository = oneOffExpenseRepository;
     this.currentUserProvider = currentUserProvider;
     this.clock = clock;
   }
@@ -193,6 +197,10 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
         account.getId(),
         account.getOwnerUserId(),
         PaymentStatus.PENDING,
+        clock.instant());
+    oneOffExpenseRepository.unlinkFinancialAccountPayments(
+        account.getId(),
+        account.getOwnerUserId(),
         clock.instant());
     transactionRepository.deleteAllByFinancialAccountIdAndOwnerUserId(
         account.getId(),

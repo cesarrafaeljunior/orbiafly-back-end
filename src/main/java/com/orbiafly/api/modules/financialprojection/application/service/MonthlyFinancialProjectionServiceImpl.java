@@ -30,6 +30,7 @@ import com.orbiafly.api.modules.loan.domain.LoanInstallment;
 import com.orbiafly.api.modules.loan.domain.LoanInstallmentStatus;
 import com.orbiafly.api.modules.loan.domain.LoanStatus;
 import com.orbiafly.api.modules.loan.infrastructure.persistence.LoanRepositoryInterface;
+import com.orbiafly.api.modules.oneoffexpense.infrastructure.persistence.OneOffExpenseRepositoryInterface;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
@@ -57,6 +58,7 @@ public class MonthlyFinancialProjectionServiceImpl implements MonthlyFinancialPr
   private final CreditCardPurchaseRepositoryInterface creditCardPurchaseRepository;
   private final InstallmentExpenseInstallmentRepositoryInterface installmentExpenseInstallmentRepository;
   private final LoanRepositoryInterface loanRepository;
+  private final OneOffExpenseRepositoryInterface oneOffExpenseRepository;
   private final MonthlyFinancialProjectionResponseDTOFactory responseDTOFactory;
   private final CurrentUserProvider currentUserProvider;
   private final Clock clock;
@@ -69,6 +71,7 @@ public class MonthlyFinancialProjectionServiceImpl implements MonthlyFinancialPr
       CreditCardPurchaseRepositoryInterface creditCardPurchaseRepository,
       InstallmentExpenseInstallmentRepositoryInterface installmentExpenseInstallmentRepository,
       LoanRepositoryInterface loanRepository,
+      OneOffExpenseRepositoryInterface oneOffExpenseRepository,
       MonthlyFinancialProjectionResponseDTOFactory responseDTOFactory,
       CurrentUserProvider currentUserProvider,
       Clock clock) {
@@ -79,6 +82,7 @@ public class MonthlyFinancialProjectionServiceImpl implements MonthlyFinancialPr
     this.creditCardPurchaseRepository = creditCardPurchaseRepository;
     this.installmentExpenseInstallmentRepository = installmentExpenseInstallmentRepository;
     this.loanRepository = loanRepository;
+    this.oneOffExpenseRepository = oneOffExpenseRepository;
     this.responseDTOFactory = responseDTOFactory;
     this.currentUserProvider = currentUserProvider;
     this.clock = clock;
@@ -103,6 +107,7 @@ public class MonthlyFinancialProjectionServiceImpl implements MonthlyFinancialPr
     List<ProjectionEventDraft> drafts = new ArrayList<>();
     drafts.addAll(expectedIncomeEvents(ownerUserId, startDate, endDate));
     drafts.addAll(fixedExpenseEvents(ownerUserId, year, month, competence));
+    drafts.addAll(oneOffExpenseEvents(ownerUserId, startDate, endDate));
     drafts.addAll(creditCardEvents(ownerUserId, startDate, endDate));
     drafts.addAll(installmentExpenseEvents(ownerUserId, startDate, endDate));
     drafts.addAll(loanEvents(ownerUserId, startDate, endDate));
@@ -202,6 +207,16 @@ public class MonthlyFinancialProjectionServiceImpl implements MonthlyFinancialPr
             ProjectionEventDirection.OUTFLOW,
             ProjectionSourceType.FIXED_EXPENSE,
             occurrence.getId()))
+        .toList();
+  }
+
+  private List<ProjectionEventDraft> oneOffExpenseEvents(
+      UUID ownerUserId, LocalDate startDate, LocalDate endDate) {
+    return oneOffExpenseRepository.findMonthly(ownerUserId, startDate, endDate).stream()
+        .filter(expense -> expense.getStatus() == PaymentStatus.PENDING)
+        .map(expense -> new ProjectionEventDraft(
+            expense.getExpenseDate(), expense.getName(), expense.getAmount(),
+            ProjectionEventDirection.OUTFLOW, ProjectionSourceType.ONE_OFF_EXPENSE, expense.getId()))
         .toList();
   }
 

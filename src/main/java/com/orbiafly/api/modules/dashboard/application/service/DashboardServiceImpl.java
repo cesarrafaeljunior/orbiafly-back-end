@@ -19,6 +19,9 @@ import com.orbiafly.api.modules.fixedexpense.web.dto.response.MonthlyExpenseResp
 import com.orbiafly.api.modules.fixedexpense.web.dto.response.MonthlyExpenseSummaryResponseDTO;
 import com.orbiafly.api.modules.fixedexpense.web.dto.response.MonthlyExpensesResponseDTO;
 import com.orbiafly.api.modules.fixedexpense.domain.PaymentStatus;
+import com.orbiafly.api.modules.oneoffexpense.application.contract.OneOffExpenseServiceInterface;
+import com.orbiafly.api.modules.oneoffexpense.web.dto.response.MonthlyOneOffExpensesResponseDTO;
+import com.orbiafly.api.modules.oneoffexpense.web.dto.response.OneOffExpenseResponseDTO;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
@@ -29,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -39,6 +43,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
 
   private final FixedExpenseServiceInterface fixedExpenseService;
   private final FinancialAccountServiceInterface financialAccountService;
+  private final OneOffExpenseServiceInterface oneOffExpenseService;
   private final MonthlyFinancialProjectionServiceInterface projectionService;
   private final DashboardMonthlyResponseDTOFactory dashboardResponseDTOFactory;
   private final Clock clock;
@@ -46,11 +51,13 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
   public DashboardServiceImpl(
       FixedExpenseServiceInterface fixedExpenseService,
       FinancialAccountServiceInterface financialAccountService,
+      OneOffExpenseServiceInterface oneOffExpenseService,
       MonthlyFinancialProjectionServiceInterface projectionService,
       DashboardMonthlyResponseDTOFactory dashboardResponseDTOFactory,
       Clock clock) {
     this.fixedExpenseService = fixedExpenseService;
     this.financialAccountService = financialAccountService;
+    this.oneOffExpenseService = oneOffExpenseService;
     this.projectionService = projectionService;
     this.dashboardResponseDTOFactory = dashboardResponseDTOFactory;
     this.clock = clock;
@@ -59,22 +66,26 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
   @Override
   public DashboardMonthlyResponseDTO getMonthlyDashboard(int year, int month) {
     MonthlyExpensesResponseDTO monthly = fixedExpenseService.getMonthlyFixedExpenses(year, month);
+    MonthlyOneOffExpensesResponseDTO oneOffMonthly = oneOffExpenseService.getMonthlyOneOffExpenses(year, month);
     FinancialAccountsOverviewResponseDTO accountsOverview = financialAccountService
         .listFinancialAccounts(false);
-    MonthlyExpenseSummaryResponseDTO monthlySummary = monthly.summary();
+    MonthlyExpenseSummaryResponseDTO fixedSummary = monthly.summary();
+    MonthlyExpenseSummaryResponseDTO oneOffSummary = oneOffMonthly.summary();
     LocalDate today = LocalDate.now(clock);
-    List<ExpenseItem> items = monthly.items().stream()
-        .map(item -> toExpenseItem(item, year, month))
+    List<ExpenseItem> items = Stream.concat(
+        monthly.items().stream().map(item -> toExpenseItem(item, year, month)),
+        oneOffMonthly.items().stream().map(this::toExpenseItem))
         .toList();
 
+    BigDecimal total = fixedSummary.total().add(oneOffSummary.total());
+    BigDecimal paid = fixedSummary.paidTotal().add(oneOffSummary.paidTotal());
+    BigDecimal pending = fixedSummary.pendingTotal().add(oneOffSummary.pendingTotal());
     Summary summary = new Summary(
-        monthlySummary.total(),
-        monthlySummary.paidTotal(),
-        monthlySummary.pendingTotal(),
-        monthlySummary.totalCount(),
-        monthlySummary.paidCount(),
-        monthlySummary.pendingCount(),
-        monthlySummary.total().signum() == 0 ? null : monthlySummary.paidPercentage());
+        total, paid, pending,
+        fixedSummary.totalCount() + oneOffSummary.totalCount(),
+        fixedSummary.paidCount() + oneOffSummary.paidCount(),
+        fixedSummary.pendingCount() + oneOffSummary.pendingCount(),
+        total.signum() == 0 ? null : percentage(paid, total));
 
     List<ExpenseItem> overdueItems = items.stream()
         .filter(item -> item.status() == PaymentStatus.PENDING)
@@ -115,7 +126,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         overdue,
         projectionService.getMonthlyProjectionResult(year, month),
         upcoming,
-        categoryTotals(monthly.items(), monthlySummary.total()),
+        categoryTotals(items, total),
         largest);
     return dashboardResponseDTOFactory.createDashboardMonthlyResponseDTO(dashboard);
   }
@@ -138,12 +149,18 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
         item.status());
   }
 
+  private ExpenseItem toExpenseItem(OneOffExpenseResponseDTO item) {
+    return new ExpenseItem(
+        item.id(), item.name(), item.amount(), item.expenseDate().getDayOfMonth(),
+        item.expenseDate(), item.categoryId(), item.category(), item.status());
+  }
+
   private List<CategoryTotal> categoryTotals(
-      List<MonthlyExpenseResponseDTO> items,
+      List<ExpenseItem> items,
       BigDecimal totalAmount) {
     Map<CategoryKey, BigDecimal> totals = new HashMap<>();
     items.forEach(item -> totals.merge(
-        new CategoryKey(item.categoryId(), item.category()),
+        new CategoryKey(item.categoryId(), item.categoryName()),
         item.amount(),
         BigDecimal::add));
     return totals.entrySet().stream()

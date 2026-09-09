@@ -120,3 +120,12 @@
 - O codigo de recuperacao e armazenado somente como hash BCrypt.
 - Solicitacoes de recuperacao retornam sucesso mesmo quando a conta nao existe, evitando enumeracao de usuarios.
 - Nesta etapa, o envio gratuito do codigo e feito no log da aplicacao por `PasswordResetCodeSenderInterface`; SMTP ou outro provedor deve substituir essa fronteira quando houver infraestrutura de envio.
+
+## ORB - Gastos avulsos - 2026-09-09
+
+- Gasto avulso e persistido como lancamento unico com data completa, categoria, valor e status; nao gera ocorrencias futuras.
+- Pagamento segue o razao imutavel de contas: cria debito com referencia ONE_OFF_EXPENSE e retorno a pendente cria credito de estorno.
+- Edicao e exclusao exigem status pendente para preservar a coerencia do historico financeiro.
+- Consulta e resumo sao mensais; atraso e derivado da data, do status e do Clock da aplicacao.
+- Dashboard agrega despesas fixas e avulsas; projecao inclui somente gastos avulsos pendentes.
+- Exclusao de conta inativa desvincula pagamentos avulsos antes de remover suas movimentacoes.

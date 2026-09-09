@@ -1,4 +1,10 @@
 # Changelog
+## 2026-09-09
+
+- Implementado o modulo de gastos avulsos com API mensal, cadastro, edicao, exclusao, status e pagamento.
+- Adicionada a migration V15, integracao ao razao de contas, dashboard e projecao financeira.
+- Cobertos cadastro, resumo mensal, validacao, pagamento idempotente e estorno.
+
 
 ## 2026-09-06
 
