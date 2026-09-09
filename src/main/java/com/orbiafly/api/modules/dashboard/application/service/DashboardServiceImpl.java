@@ -14,6 +14,7 @@ import com.orbiafly.api.modules.dashboard.web.factory.DashboardMonthlyResponseDT
 import com.orbiafly.api.modules.financialaccount.application.contract.FinancialAccountServiceInterface;
 import com.orbiafly.api.modules.financialaccount.web.dto.response.FinancialAccountsOverviewResponseDTO;
 import com.orbiafly.api.modules.fixedexpense.application.contract.FixedExpenseServiceInterface;
+import com.orbiafly.api.modules.financialprojection.application.contract.MonthlyFinancialProjectionServiceInterface;
 import com.orbiafly.api.modules.fixedexpense.web.dto.response.MonthlyExpenseResponseDTO;
 import com.orbiafly.api.modules.fixedexpense.web.dto.response.MonthlyExpenseSummaryResponseDTO;
 import com.orbiafly.api.modules.fixedexpense.web.dto.response.MonthlyExpensesResponseDTO;
@@ -38,16 +39,19 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
 
   private final FixedExpenseServiceInterface fixedExpenseService;
   private final FinancialAccountServiceInterface financialAccountService;
+  private final MonthlyFinancialProjectionServiceInterface projectionService;
   private final DashboardMonthlyResponseDTOFactory dashboardResponseDTOFactory;
   private final Clock clock;
 
   public DashboardServiceImpl(
       FixedExpenseServiceInterface fixedExpenseService,
       FinancialAccountServiceInterface financialAccountService,
+      MonthlyFinancialProjectionServiceInterface projectionService,
       DashboardMonthlyResponseDTOFactory dashboardResponseDTOFactory,
       Clock clock) {
     this.fixedExpenseService = fixedExpenseService;
     this.financialAccountService = financialAccountService;
+    this.projectionService = projectionService;
     this.dashboardResponseDTOFactory = dashboardResponseDTOFactory;
     this.clock = clock;
   }
@@ -109,6 +113,7 @@ public class DashboardServiceImpl implements DashboardServiceInterface {
                 .toList()),
         summary,
         overdue,
+        projectionService.getMonthlyProjectionResult(year, month),
         upcoming,
         categoryTotals(monthly.items(), monthlySummary.total()),
         largest);

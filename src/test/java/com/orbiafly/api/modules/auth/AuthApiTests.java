@@ -7,6 +7,8 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.orbiafly.api.TestAuthHelper;
 import com.orbiafly.api.modules.auth.domain.AppRole;
 import com.orbiafly.api.modules.auth.domain.AppUser;
+import com.orbiafly.api.modules.auth.application.contract.PasswordResetCodeSenderInterface;
 import com.orbiafly.api.modules.auth.infrastructure.persistence.AppUserRepositoryInterface;
 import java.util.Map;
 import java.util.UUID;
@@ -22,7 +25,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.mockito.ArgumentCaptor;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -50,6 +55,9 @@ class AuthApiTests {
   @Autowired
   private PasswordEncoder passwordEncoder;
 
+  @MockBean
+  private PasswordResetCodeSenderInterface resetCodeSender;
+
   private TestAuthHelper auth;
 
   @BeforeEach
@@ -65,8 +73,10 @@ class AuthApiTests {
     jdbcTemplate.update("DELETE FROM installment_purchase");
     jdbcTemplate.update("DELETE FROM fixed_expense_occurrence");
     jdbcTemplate.update("DELETE FROM fixed_expense");
+    jdbcTemplate.update("DELETE FROM account_transfer");
     jdbcTemplate.update("DELETE FROM financial_transaction");
     jdbcTemplate.update("DELETE FROM financial_account");
+    jdbcTemplate.update("DELETE FROM password_reset_code");
     jdbcTemplate.update("DELETE FROM app_user_role WHERE user_id <> ?::uuid",
         "00000000-0000-0000-0000-000000000100");
     jdbcTemplate.update("DELETE FROM app_user WHERE id <> ?::uuid",
@@ -111,6 +121,56 @@ class AuthApiTests {
             .contentType(MediaType.APPLICATION_JSON)
             .content(json(Map.of("login", "bruno", "password", "errada"))))
         .andExpect(status().isUnauthorized());
+  }
+
+
+  @Test
+  void changesPasswordForAuthenticatedUser() throws Exception {
+    String token = auth.registerAndLogin("fabi@example.com", "fabi", "senha-antiga");
+
+    mockMvc.perform(post("/api/v1/auth/change-password")
+            .header("Authorization", "Bearer " + token)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of(
+                "currentPassword", "senha-antiga",
+                "newPassword", "senha-nova"))))
+        .andExpect(status().isNoContent());
+
+    mockMvc.perform(post("/api/v1/auth/login")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of("login", "fabi", "password", "senha-antiga"))))
+        .andExpect(status().isUnauthorized());
+
+    mockMvc.perform(post("/api/v1/auth/login")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of("login", "fabi", "password", "senha-nova"))))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void resetsPasswordWithTemporaryCode() throws Exception {
+    auth.registerAndLogin("gui@example.com", "gui", "senha-antiga");
+
+    mockMvc.perform(post("/api/v1/auth/password-reset/request")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of("login", "gui@example.com"))))
+        .andExpect(status().isNoContent());
+
+    ArgumentCaptor<String> codeCaptor = ArgumentCaptor.forClass(String.class);
+    verify(resetCodeSender).sendPasswordResetCode(eq("gui@example.com"), eq("gui"), codeCaptor.capture());
+
+    mockMvc.perform(post("/api/v1/auth/password-reset/confirm")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of(
+                "login", "gui",
+                "code", codeCaptor.getValue(),
+                "newPassword", "senha-nova"))))
+        .andExpect(status().isNoContent());
+
+    mockMvc.perform(post("/api/v1/auth/login")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of("login", "gui", "password", "senha-nova"))))
+        .andExpect(status().isOk());
   }
 
   @Test

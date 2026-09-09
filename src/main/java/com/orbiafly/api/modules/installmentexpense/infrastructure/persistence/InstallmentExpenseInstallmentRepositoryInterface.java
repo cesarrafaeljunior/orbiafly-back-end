@@ -4,6 +4,8 @@ import com.orbiafly.api.modules.installmentexpense.domain.InstallmentExpenseInst
 import com.orbiafly.api.modules.fixedexpense.domain.PaymentStatus;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,6 +16,21 @@ import org.springframework.data.repository.query.Param;
 
 public interface InstallmentExpenseInstallmentRepositoryInterface
     extends JpaRepository<InstallmentExpenseInstallment, UUID> {
+
+  @Query("""
+      SELECT installment
+      FROM InstallmentExpenseInstallment installment
+      JOIN FETCH installment.purchase
+      WHERE installment.ownerUserId = :ownerUserId
+        AND installment.status = :status
+        AND installment.dueDate BETWEEN :startDate AND :endDate
+      ORDER BY installment.dueDate ASC, installment.purchase.description ASC
+      """)
+  List<InstallmentExpenseInstallment> findMonthlyPending(
+      @Param("ownerUserId") UUID ownerUserId,
+      @Param("status") PaymentStatus status,
+      @Param("startDate") LocalDate startDate,
+      @Param("endDate") LocalDate endDate);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("""

@@ -152,13 +152,26 @@ public class FixedExpenseServiceImpl implements FixedExpenseServiceInterface {
       UUID categoryId,
       boolean active) {
     FixedExpense expense = findExpense(id);
+    Category category = findCategory(categoryId);
+    Instant now = clock.instant();
+    String normalizedName = normalizeName(name);
     expense.updateFixedExpense(
-        normalizeName(name),
+        normalizedName,
         defaultAmount,
         dueDay,
-        findCategory(categoryId),
+        category,
         active,
-        clock.instant());
+        now);
+    occurrenceRepository.syncPendingOccurrences(
+        expense.getId(),
+        expense.getOwnerUserId(),
+        PaymentStatus.PENDING,
+        normalizedName,
+        defaultAmount,
+        dueDay,
+        category.getId(),
+        category.getName(),
+        now);
     FixedExpenseResult result = fixedExpenseResultFactory.createFixedExpenseResult(expense);
     return fixedExpenseResponseDTOFactory.createFixedExpenseResponseDTO(result);
   }

@@ -111,3 +111,12 @@
 - Metodos publicos de services e factories usam nomes concretos do caso de uso ou conversao, evitando nomes genericos como `create`, `update`, `get` e `from`.
 - Factories em `application/factory` podem montar modelos internos a partir de entidades quando isso reduzir conversao repetida no service.
 - Nenhuma regra financeira, endpoint funcional ou schema de banco foi alterado nesta refatoracao.
+
+
+## Recuperacao e alteracao de senha - 2026-09-06
+
+- Troca de senha autenticada exige a senha atual e atualiza apenas o hash armazenado.
+- Recuperacao de senha usa codigo numerico de 6 digitos, validade de 15 minutos e uso unico.
+- O codigo de recuperacao e armazenado somente como hash BCrypt.
+- Solicitacoes de recuperacao retornam sucesso mesmo quando a conta nao existe, evitando enumeracao de usuarios.
+- Nesta etapa, o envio gratuito do codigo e feito no log da aplicacao por `PasswordResetCodeSenderInterface`; SMTP ou outro provedor deve substituir essa fronteira quando houver infraestrutura de envio.

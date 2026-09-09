@@ -1,6 +1,8 @@
 package com.orbiafly.api.modules.financialaccount.infrastructure.persistence;
 
+import com.orbiafly.api.modules.financialaccount.domain.FinancialReferenceType;
 import com.orbiafly.api.modules.financialaccount.domain.FinancialTransaction;
+import com.orbiafly.api.modules.financialaccount.domain.FinancialTransactionType;
 import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.util.List;
@@ -27,13 +29,32 @@ public interface FinancialTransactionRepositoryInterface
       @Param("id") UUID id,
       @Param("ownerUserId") UUID ownerUserId);
 
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("""
+      SELECT transaction
+      FROM FinancialTransaction transaction
+      WHERE transaction.ownerUserId = :ownerUserId
+        AND transaction.referenceType = :referenceType
+        AND transaction.referenceId = :referenceId
+        AND transaction.type = :type
+      ORDER BY transaction.createdAt DESC
+      """)
+  List<FinancialTransaction> findDebitByReferenceForUpdate(
+      @Param("ownerUserId") UUID ownerUserId,
+      @Param("referenceType") FinancialReferenceType referenceType,
+      @Param("referenceId") UUID referenceId,
+      @Param("type") FinancialTransactionType type);
+
   @Query(value = """
       SELECT
         financial_account_id AS accountId,
         COALESCE(SUM(
           CASE transaction_type
             WHEN 'CREDIT' THEN amount
+            WHEN 'TRANSFER_IN' THEN amount
             WHEN 'DEBIT' THEN -amount
+            WHEN 'TRANSFER_OUT' THEN -amount
             ELSE amount
           END
         ), 0) AS balanceDelta
@@ -47,7 +68,9 @@ public interface FinancialTransactionRepositoryInterface
       SELECT COALESCE(SUM(
         CASE transaction_type
           WHEN 'CREDIT' THEN amount
+          WHEN 'TRANSFER_IN' THEN amount
           WHEN 'DEBIT' THEN -amount
+          WHEN 'TRANSFER_OUT' THEN -amount
           ELSE amount
         END
       ), 0)

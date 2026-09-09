@@ -1,6 +1,7 @@
 package com.orbiafly.api.modules.dashboard.application.model;
 
 import com.orbiafly.api.modules.financialaccount.domain.FinancialAccountType;
+import com.orbiafly.api.modules.financialprojection.application.model.MonthlyFinancialProjectionResult;
 import com.orbiafly.api.modules.fixedexpense.domain.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -12,6 +13,7 @@ public record DashboardMonthlyResult(
     AccountsSummary accounts,
     Summary summary,
     Overdue overdue,
+    MonthlyFinancialProjectionResult projection,
     List<ExpenseItem> upcomingExpenses,
     List<CategoryTotal> categories,
     List<ExpenseItem> largestExpenses) {

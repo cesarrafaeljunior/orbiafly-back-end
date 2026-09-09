@@ -2,10 +2,18 @@ package com.orbiafly.api.modules.dashboard.web.factory;
 
 import com.orbiafly.api.modules.dashboard.application.model.DashboardMonthlyResult;
 import com.orbiafly.api.modules.dashboard.web.dto.response.DashboardMonthlyResponseDTO;
+import com.orbiafly.api.modules.financialprojection.web.factory.MonthlyFinancialProjectionResponseDTOFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DashboardMonthlyResponseDTOFactory {
+
+  private final MonthlyFinancialProjectionResponseDTOFactory projectionFactory;
+
+  public DashboardMonthlyResponseDTOFactory(
+      MonthlyFinancialProjectionResponseDTOFactory projectionFactory) {
+    this.projectionFactory = projectionFactory;
+  }
 
   public DashboardMonthlyResponseDTO createDashboardMonthlyResponseDTO(
       DashboardMonthlyResult dashboard) {
@@ -14,6 +22,7 @@ public class DashboardMonthlyResponseDTOFactory {
         accountsFrom(dashboard.accounts()),
         summaryFrom(dashboard.summary()),
         overdueFrom(dashboard.overdue()),
+        projectionFactory.createMonthlyFinancialProjectionResponseDTO(dashboard.projection()),
         dashboard.upcomingExpenses().stream()
             .map(this::expenseFrom)
             .toList(),

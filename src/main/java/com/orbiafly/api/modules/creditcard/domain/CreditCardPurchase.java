@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -37,6 +39,10 @@ public class CreditCardPurchase {
   @Column(name = "purchase_date", nullable = false)
   private LocalDate purchaseDate;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "purchase_type", nullable = false, length = 30)
+  private CreditCardPurchaseType purchaseType;
+
   @Column(name = "installment_count", nullable = false)
   private int installmentCount;
 
@@ -66,6 +72,7 @@ public class CreditCardPurchase {
       String description,
       BigDecimal totalAmount,
       LocalDate purchaseDate,
+      CreditCardPurchaseType purchaseType,
       int installmentCount,
       BigDecimal installmentAmount,
       UUID ownerUserId,
@@ -75,6 +82,7 @@ public class CreditCardPurchase {
     this.description = description;
     this.totalAmount = totalAmount;
     this.purchaseDate = purchaseDate;
+    this.purchaseType = purchaseType;
     this.installmentCount = installmentCount;
     this.installmentAmount = installmentAmount;
     this.ownerUserId = ownerUserId;
@@ -88,6 +96,31 @@ public class CreditCardPurchase {
 
   public void softDelete(Instant now) {
     this.deletedAt = now;
+    this.updatedAt = now;
+  }
+
+  public void updateDetails(
+      CreditCard creditCard,
+      String description,
+      BigDecimal totalAmount,
+      LocalDate purchaseDate,
+      CreditCardPurchaseType purchaseType,
+      int installmentCount,
+      BigDecimal installmentAmount,
+      Instant now) {
+    this.creditCard = creditCard;
+    this.description = description;
+    this.totalAmount = totalAmount;
+    this.purchaseDate = purchaseDate;
+    this.purchaseType = purchaseType;
+    this.installmentCount = installmentCount;
+    this.installmentAmount = installmentAmount;
+    this.updatedAt = now;
+  }
+
+  public void replaceInstallments(List<CreditCardInstallment> installments, Instant now) {
+    this.installments.clear();
+    this.installments.addAll(installments);
     this.updatedAt = now;
   }
 
@@ -118,6 +151,10 @@ public class CreditCardPurchase {
 
   public LocalDate getPurchaseDate() {
     return purchaseDate;
+  }
+
+  public CreditCardPurchaseType getPurchaseType() {
+    return purchaseType;
   }
 
   public int getInstallmentCount() {

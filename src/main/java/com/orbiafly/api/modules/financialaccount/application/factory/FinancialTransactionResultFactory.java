@@ -27,8 +27,8 @@ public class FinancialTransactionResultFactory {
 
   private BigDecimal balanceEffect(FinancialTransaction transaction) {
     return switch (transaction.getType()) {
-      case CREDIT -> transaction.getAmount();
-      case DEBIT -> transaction.getAmount().negate();
+      case CREDIT, TRANSFER_IN -> transaction.getAmount();
+      case DEBIT, TRANSFER_OUT -> transaction.getAmount().negate();
       case ADJUSTMENT -> transaction.getAmount();
     };
   }

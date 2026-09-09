@@ -2,6 +2,7 @@ package com.orbiafly.api.modules.dashboard.web.dto.response;
 
 import com.orbiafly.api.modules.financialaccount.domain.FinancialAccountType;
 import com.orbiafly.api.modules.fixedexpense.domain.PaymentStatus;
+import com.orbiafly.api.modules.financialprojection.web.dto.response.MonthlyFinancialProjectionResponseDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -12,6 +13,7 @@ public record DashboardMonthlyResponseDTO(
     AccountsSummary accounts,
     Summary summary,
     Overdue overdue,
+    MonthlyFinancialProjectionResponseDTO projection,
     List<ExpenseItem> upcomingExpenses,
     List<CategoryTotal> categories,
     List<ExpenseItem> largestExpenses) {

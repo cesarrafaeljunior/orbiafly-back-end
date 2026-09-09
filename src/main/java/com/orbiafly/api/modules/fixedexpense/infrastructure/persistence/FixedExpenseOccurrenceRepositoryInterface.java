@@ -89,6 +89,30 @@ public interface FixedExpenseOccurrenceRepositoryInterface
   @Modifying
   @Query("""
       UPDATE FixedExpenseOccurrence occurrence
+      SET occurrence.name = :name,
+          occurrence.amount = :amount,
+          occurrence.dueDay = :dueDay,
+          occurrence.categoryId = :categoryId,
+          occurrence.categoryName = :categoryName,
+          occurrence.updatedAt = :updatedAt
+      WHERE occurrence.fixedExpense.id = :fixedExpenseId
+        AND occurrence.ownerUserId = :ownerUserId
+        AND occurrence.status = :status
+      """)
+  int syncPendingOccurrences(
+      @Param("fixedExpenseId") UUID fixedExpenseId,
+      @Param("ownerUserId") UUID ownerUserId,
+      @Param("status") PaymentStatus status,
+      @Param("name") String name,
+      @Param("amount") java.math.BigDecimal amount,
+      @Param("dueDay") int dueDay,
+      @Param("categoryId") UUID categoryId,
+      @Param("categoryName") String categoryName,
+      @Param("updatedAt") Instant updatedAt);
+
+  @Modifying
+  @Query("""
+      UPDATE FixedExpenseOccurrence occurrence
       SET occurrence.status = :status,
           occurrence.paidAt = NULL,
           occurrence.financialAccountId = NULL,

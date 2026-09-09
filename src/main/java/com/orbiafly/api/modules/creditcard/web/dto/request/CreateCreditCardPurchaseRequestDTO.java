@@ -1,5 +1,6 @@
 package com.orbiafly.api.modules.creditcard.web.dto.request;
 
+import com.orbiafly.api.modules.creditcard.domain.CreditCardPurchaseType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
@@ -27,7 +28,11 @@ public record CreateCreditCardPurchaseRequestDTO(
     @NotNull(message = "Informe a data da compra.")
     LocalDate purchaseDate,
 
-    @NotNull(message = "Informe o número de parcelas.")
+    @NotNull(message = "Informe o tipo da compra.")
+    CreditCardPurchaseType purchaseType,
+
+    UUID financialAccountId,
+
     @Min(value = 1, message = "A compra deve ter pelo menos uma parcela.")
     @Max(value = 360, message = "A compra deve ter no máximo 360 parcelas.")
     Integer installmentCount) {

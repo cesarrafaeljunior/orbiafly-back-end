@@ -68,6 +68,9 @@ public interface FinancialAccountServiceInterface {
   AccountTransactionResult reverseFinancialAccountDebit(
       UUID transactionId, LocalDate occurredOn, String description);
 
+  void reverseFinancialAccountDebitForReference(
+      FinancialReferenceType referenceType, UUID referenceId, LocalDate occurredOn, String description);
+
   FinancialTransactionResult getFinancialTransaction(UUID id);
 
   boolean hasActiveFinancialAccounts();

@@ -13,6 +13,7 @@ import com.orbiafly.api.modules.creditcard.domain.CreditCardInstallment;
 import com.orbiafly.api.modules.creditcard.domain.CreditCardInstallmentStatus;
 import com.orbiafly.api.modules.creditcard.domain.CreditCardPurchase;
 import com.orbiafly.api.modules.creditcard.domain.CreditCardPurchaseStatus;
+import com.orbiafly.api.modules.creditcard.domain.CreditCardPurchaseType;
 import com.orbiafly.api.modules.creditcard.infrastructure.persistence.CreditCardInstallmentRepositoryInterface;
 import com.orbiafly.api.modules.creditcard.infrastructure.persistence.CreditCardPurchaseRepositoryInterface;
 import com.orbiafly.api.modules.creditcard.infrastructure.persistence.CreditCardRepositoryInterface;
@@ -23,6 +24,8 @@ import com.orbiafly.api.modules.creditcard.web.dto.response.CreditCardPurchaseRe
 import com.orbiafly.api.modules.creditcard.web.factory.CreditCardMonthlyPurchasesResponseDTOFactory;
 import com.orbiafly.api.modules.creditcard.web.factory.CreditCardPurchaseOverviewResponseDTOFactory;
 import com.orbiafly.api.modules.creditcard.web.factory.CreditCardPurchaseResponseDTOFactory;
+import com.orbiafly.api.modules.financialaccount.application.contract.FinancialAccountServiceInterface;
+import com.orbiafly.api.modules.financialaccount.domain.FinancialReferenceType;
 import com.orbiafly.api.modules.fixedexpense.application.ResourceNotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -50,6 +53,7 @@ public class CreditCardPurchaseServiceImpl implements CreditCardPurchaseServiceI
   private final CreditCardPurchaseResponseDTOFactory purchaseResponseDTOFactory;
   private final CreditCardPurchaseOverviewResponseDTOFactory overviewResponseDTOFactory;
   private final CreditCardMonthlyPurchasesResponseDTOFactory monthlyPurchasesResponseDTOFactory;
+  private final FinancialAccountServiceInterface financialAccountService;
   private final CurrentUserProvider currentUserProvider;
   private final Clock clock;
 
@@ -61,6 +65,7 @@ public class CreditCardPurchaseServiceImpl implements CreditCardPurchaseServiceI
       CreditCardPurchaseResponseDTOFactory purchaseResponseDTOFactory,
       CreditCardPurchaseOverviewResponseDTOFactory overviewResponseDTOFactory,
       CreditCardMonthlyPurchasesResponseDTOFactory monthlyPurchasesResponseDTOFactory,
+      FinancialAccountServiceInterface financialAccountService,
       CurrentUserProvider currentUserProvider,
       Clock clock) {
     this.cardRepository = cardRepository;
@@ -70,6 +75,7 @@ public class CreditCardPurchaseServiceImpl implements CreditCardPurchaseServiceI
     this.purchaseResponseDTOFactory = purchaseResponseDTOFactory;
     this.overviewResponseDTOFactory = overviewResponseDTOFactory;
     this.monthlyPurchasesResponseDTOFactory = monthlyPurchasesResponseDTOFactory;
+    this.financialAccountService = financialAccountService;
     this.currentUserProvider = currentUserProvider;
     this.clock = clock;
   }
@@ -149,7 +155,7 @@ public class CreditCardPurchaseServiceImpl implements CreditCardPurchaseServiceI
             purchase,
             YearMonth.now(clock)))
         .map(purchaseResponseDTOFactory::createCreditCardPurchaseResponseDTO)
-        .orElseThrow(() -> new ResourceNotFoundException("Compra parcelada não encontrada."));
+        .orElseThrow(() -> new ResourceNotFoundException("Compra do cartão não encontrada."));
   }
 
   @Override
@@ -159,8 +165,12 @@ public class CreditCardPurchaseServiceImpl implements CreditCardPurchaseServiceI
       UUID creditCardId,
       BigDecimal totalAmount,
       LocalDate purchaseDate,
-      int installmentCount) {
-    validatePurchase(totalAmount, installmentCount);
+      CreditCardPurchaseType purchaseType,
+      UUID financialAccountId,
+      Integer installmentCount) {
+    CreditCardPurchaseType normalizedType = normalizePurchaseType(purchaseType);
+    int normalizedInstallmentCount = normalizeInstallmentCount(normalizedType, installmentCount);
+    validatePurchase(totalAmount, normalizedInstallmentCount);
     UUID ownerUserId = currentUserProvider.currentUserId();
     CreditCard card = cardRepository.findByIdAndOwnerUserIdForUpdate(creditCardId, ownerUserId)
         .orElseThrow(() -> new ResourceNotFoundException("Cartão de crédito não encontrado."));
@@ -168,20 +178,89 @@ public class CreditCardPurchaseServiceImpl implements CreditCardPurchaseServiceI
       throw new IllegalStateException("O cartão selecionado está inativo.");
     }
     Instant now = clock.instant();
-    BigDecimal installmentAmount = regularInstallmentAmount(totalAmount, installmentCount);
+    BigDecimal installmentAmount = regularInstallmentAmount(totalAmount, normalizedInstallmentCount);
     CreditCardPurchase purchase = new CreditCardPurchase(
         card,
         normalizeRequired(description),
         totalAmount,
         purchaseDate,
-        installmentCount,
+        normalizedType,
+        normalizedInstallmentCount,
         installmentAmount,
         ownerUserId,
         now);
-    createInstallments(purchase, card, totalAmount, installmentAmount, installmentCount, now);
-    CreditCardPurchase saved = purchaseRepository.save(purchase);
+    createInstallments(purchase, card, totalAmount, installmentAmount, normalizedInstallmentCount, now);
+    CreditCardPurchase saved = purchaseRepository.saveAndFlush(purchase);
+    registerSinglePurchaseDebitIfNeeded(
+        saved,
+        normalizedType,
+        financialAccountId,
+        totalAmount,
+        purchaseDate);
     return purchaseResponseDTOFactory.createCreditCardPurchaseResponseDTO(
         purchaseResultFactory.createCreditCardPurchaseResult(saved, YearMonth.now(clock)));
+  }
+
+  @Override
+  @Transactional
+  public CreditCardPurchaseResponseDTO updateCreditCardPurchase(
+      UUID id,
+      String description,
+      UUID creditCardId,
+      BigDecimal totalAmount,
+      LocalDate purchaseDate,
+      CreditCardPurchaseType purchaseType,
+      UUID financialAccountId,
+      Integer installmentCount) {
+    CreditCardPurchase purchase = purchaseRepository.findByIdAndOwnerUserIdForUpdate(
+            id,
+            currentUserProvider.currentUserId())
+        .orElseThrow(() -> new ResourceNotFoundException("Compra do cartão não encontrada."));
+    CreditCardPurchaseType normalizedType = normalizePurchaseType(purchaseType);
+    int normalizedInstallmentCount = normalizeInstallmentCount(normalizedType, installmentCount);
+    validatePurchase(totalAmount, normalizedInstallmentCount);
+
+    UUID ownerUserId = currentUserProvider.currentUserId();
+    CreditCard card = cardRepository.findByIdAndOwnerUserIdForUpdate(creditCardId, ownerUserId)
+        .orElseThrow(() -> new ResourceNotFoundException("Cartão de crédito não encontrado."));
+    if (!card.isActive()) {
+      throw new IllegalStateException("O cartão selecionado está inativo.");
+    }
+
+    reverseSinglePurchaseDebitIfNeeded(purchase);
+    Instant now = clock.instant();
+    BigDecimal installmentAmount = regularInstallmentAmount(totalAmount, normalizedInstallmentCount);
+    List<CreditCardInstallmentStatus> previousStatuses = purchase.getInstallments().stream()
+        .sorted(Comparator.comparingInt(CreditCardInstallment::getInstallmentNumber))
+        .map(CreditCardInstallment::getStatus)
+        .toList();
+    purchase.updateDetails(
+        card,
+        normalizeRequired(description),
+        totalAmount,
+        purchaseDate,
+        normalizedType,
+        normalizedInstallmentCount,
+        installmentAmount,
+        now);
+    purchase.replaceInstallments(
+        createReplacementInstallments(
+            purchase,
+            card,
+            totalAmount,
+            installmentAmount,
+            normalizedInstallmentCount,
+            previousStatuses,
+            now),
+        now);
+    registerSinglePurchaseDebitIfNeeded(
+        purchase,
+        normalizedType,
+        financialAccountId,
+        totalAmount,
+        purchaseDate);
+    return purchaseResponseDTOFactory.createCreditCardPurchaseResponseDTO(
+        purchaseResultFactory.createCreditCardPurchaseResult(purchase, YearMonth.now(clock)));
   }
 
   @Override
@@ -229,7 +308,8 @@ public class CreditCardPurchaseServiceImpl implements CreditCardPurchaseServiceI
     CreditCardPurchase purchase = purchaseRepository.findByIdAndOwnerUserIdForUpdate(
             id,
             currentUserProvider.currentUserId())
-        .orElseThrow(() -> new ResourceNotFoundException("Compra parcelada não encontrada."));
+        .orElseThrow(() -> new ResourceNotFoundException("Compra do cartão não encontrada."));
+    reverseSinglePurchaseDebitIfNeeded(purchase);
     purchase.softDelete(clock.instant());
   }
 
@@ -327,6 +407,80 @@ public class CreditCardPurchaseServiceImpl implements CreditCardPurchaseServiceI
         .divide(total, 2, RoundingMode.HALF_UP);
   }
 
+  private void reverseSinglePurchaseDebitIfNeeded(CreditCardPurchase purchase) {
+    if (purchase.getPurchaseType() != CreditCardPurchaseType.SINGLE) {
+      return;
+    }
+    financialAccountService.reverseFinancialAccountDebitForReference(
+        FinancialReferenceType.CREDIT_CARD_PURCHASE,
+        purchase.getId(),
+        LocalDate.now(clock),
+        "Estorno de compra à vista no cartão - " + purchase.getDescription());
+  }
+
+  private void registerSinglePurchaseDebitIfNeeded(
+      CreditCardPurchase purchase,
+      CreditCardPurchaseType purchaseType,
+      UUID financialAccountId,
+      BigDecimal totalAmount,
+      LocalDate purchaseDate) {
+    if (purchaseType != CreditCardPurchaseType.SINGLE) {
+      return;
+    }
+    if (financialAccountId == null) {
+      throw new IllegalArgumentException("Selecione uma conta para pagar a compra à vista.");
+    }
+    financialAccountService.debitFinancialAccountForReference(
+        financialAccountId,
+        totalAmount,
+        "Compra à vista no cartão - " + purchase.getDescription(),
+        purchaseDate,
+        FinancialReferenceType.CREDIT_CARD_PURCHASE,
+        purchase.getId());
+  }
+
+  private BigDecimal pendingInstallmentTotal(CreditCardPurchase purchase) {
+    return purchase.getInstallments().stream()
+        .filter(installment -> installment.getStatus() == CreditCardInstallmentStatus.PENDING)
+        .map(CreditCardInstallment::getAmount)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+  }
+
+  private List<CreditCardInstallment> createReplacementInstallments(
+      CreditCardPurchase purchase,
+      CreditCard card,
+      BigDecimal totalAmount,
+      BigDecimal regularAmount,
+      int installmentCount,
+      List<CreditCardInstallmentStatus> previousStatuses,
+      Instant now) {
+    YearMonth firstCompetence = firstCompetence(purchase.getPurchaseDate(), card.getClosingDay());
+    BigDecimal accumulated = BigDecimal.ZERO;
+    List<CreditCardInstallment> installments = new java.util.ArrayList<>();
+    for (int index = 1; index <= installmentCount; index++) {
+      BigDecimal amount = index == installmentCount
+          ? totalAmount.subtract(accumulated)
+          : regularAmount;
+      accumulated = accumulated.add(amount);
+      YearMonth competence = firstCompetence.plusMonths(index - 1L);
+      CreditCardInstallment installment = new CreditCardInstallment(
+          purchase,
+          index,
+          amount,
+          competence.getYear(),
+          competence.getMonthValue(),
+          dueDate(competence, card.getDueDay()),
+          purchase.getOwnerUserId(),
+          now);
+      if (index <= previousStatuses.size()
+          && previousStatuses.get(index - 1) == CreditCardInstallmentStatus.PAID) {
+        installment.updateStatus(CreditCardInstallmentStatus.PAID, now);
+      }
+      installments.add(installment);
+    }
+    return installments;
+  }
+
   private void createInstallments(
       CreditCardPurchase purchase,
       CreditCard card,
@@ -372,6 +526,22 @@ public class CreditCardPurchaseServiceImpl implements CreditCardPurchaseServiceI
       throw new IllegalArgumentException("O ano deve estar entre 2000 e 2200.");
     }
     YearMonth.of(year, month);
+  }
+
+  private CreditCardPurchaseType normalizePurchaseType(CreditCardPurchaseType purchaseType) {
+    return purchaseType == null ? CreditCardPurchaseType.INSTALLMENT : purchaseType;
+  }
+
+  private int normalizeInstallmentCount(
+      CreditCardPurchaseType purchaseType,
+      Integer installmentCount) {
+    if (purchaseType == CreditCardPurchaseType.SINGLE) {
+      return 1;
+    }
+    if (installmentCount == null) {
+      throw new IllegalArgumentException("Informe o número de parcelas.");
+    }
+    return installmentCount;
   }
 
   private void validatePurchase(BigDecimal totalAmount, int installmentCount) {

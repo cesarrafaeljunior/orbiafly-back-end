@@ -1,6 +1,7 @@
 package com.orbiafly.api.modules.creditcard.application.contract;
 
 import com.orbiafly.api.modules.creditcard.domain.CreditCardInstallmentStatus;
+import com.orbiafly.api.modules.creditcard.domain.CreditCardPurchaseType;
 import com.orbiafly.api.modules.creditcard.web.dto.response.CreditCardMonthlyPurchaseInstallmentResponseDTO;
 import com.orbiafly.api.modules.creditcard.web.dto.response.CreditCardMonthlyPurchasesResponseDTO;
 import com.orbiafly.api.modules.creditcard.web.dto.response.CreditCardPurchaseOverviewResponseDTO;
@@ -22,7 +23,19 @@ public interface CreditCardPurchaseServiceInterface {
       UUID creditCardId,
       BigDecimal totalAmount,
       LocalDate purchaseDate,
-      int installmentCount);
+      CreditCardPurchaseType purchaseType,
+      UUID financialAccountId,
+      Integer installmentCount);
+
+  CreditCardPurchaseResponseDTO updateCreditCardPurchase(
+      UUID id,
+      String description,
+      UUID creditCardId,
+      BigDecimal totalAmount,
+      LocalDate purchaseDate,
+      CreditCardPurchaseType purchaseType,
+      UUID financialAccountId,
+      Integer installmentCount);
 
   CreditCardMonthlyPurchaseInstallmentResponseDTO updateCreditCardInstallmentAmount(
       UUID installmentId,

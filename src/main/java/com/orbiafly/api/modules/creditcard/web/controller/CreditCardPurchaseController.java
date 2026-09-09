@@ -3,6 +3,7 @@ package com.orbiafly.api.modules.creditcard.web.controller;
 import com.orbiafly.api.modules.creditcard.application.contract.CreditCardPurchaseServiceInterface;
 import com.orbiafly.api.modules.creditcard.web.dto.request.CreateCreditCardPurchaseRequestDTO;
 import com.orbiafly.api.modules.creditcard.web.dto.request.UpdateCreditCardInstallmentAmountRequestDTO;
+import com.orbiafly.api.modules.creditcard.web.dto.request.UpdateCreditCardPurchaseRequestDTO;
 import com.orbiafly.api.modules.creditcard.web.dto.request.UpdateCreditCardInstallmentStatusRequestDTO;
 import com.orbiafly.api.modules.creditcard.web.dto.response.CreditCardMonthlyPurchaseInstallmentResponseDTO;
 import com.orbiafly.api.modules.creditcard.web.dto.response.CreditCardMonthlyPurchasesResponseDTO;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -58,6 +60,23 @@ public class CreditCardPurchaseController {
         request.creditCardId(),
         request.totalAmount(),
         request.purchaseDate(),
+        request.purchaseType(),
+        request.financialAccountId(),
+        request.installmentCount());
+  }
+
+  @PutMapping("/{id}")
+  public CreditCardPurchaseResponseDTO updateCreditCardPurchase(
+      @PathVariable UUID id,
+      @Valid @RequestBody UpdateCreditCardPurchaseRequestDTO request) {
+    return service.updateCreditCardPurchase(
+        id,
+        request.description(),
+        request.creditCardId(),
+        request.totalAmount(),
+        request.purchaseDate(),
+        request.purchaseType(),
+        request.financialAccountId(),
         request.installmentCount());
   }
 

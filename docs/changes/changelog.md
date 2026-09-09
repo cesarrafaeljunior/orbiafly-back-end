@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-06
+
+- Adicionados endpoints de troca de senha autenticada e recuperação de senha por código temporário.
+- Criada a migration `V12__password_reset_codes.sql` para registrar códigos de recuperação com validade e uso único.
+- Implementado emissor inicial de código via log da aplicação, mantendo a fronteira pronta para envio real por e-mail.
+
 ## 2026-08-31
 
 - Implementadas compras parceladas no cartao com `CreditCardPurchase` e `CreditCardInstallment`.

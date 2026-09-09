@@ -46,6 +46,7 @@ class FixedExpenseApiTests {
     jdbcTemplate.update("DELETE FROM installment_purchase");
     jdbcTemplate.update("DELETE FROM fixed_expense_occurrence");
     jdbcTemplate.update("DELETE FROM fixed_expense");
+    jdbcTemplate.update("DELETE FROM account_transfer");
     jdbcTemplate.update("DELETE FROM financial_transaction");
     jdbcTemplate.update("DELETE FROM financial_account");
   }
@@ -102,6 +103,23 @@ class FixedExpenseApiTests {
         Integer.class);
     org.assertj.core.api.Assertions.assertThat(occurrenceCount).isEqualTo(1);
 
+    performJson(put("/api/v1/fixed-expenses/{id}", fixedExpenseId), Map.of(
+        "name", "Energia residencial",
+        "defaultAmount", 220.00,
+        "dueDay", 20,
+        "categoryId", "00000000-0000-0000-0000-000000000001",
+        "active", true), 200);
+
+    JsonNode updatedPendingAugust = getMonth(2026, 8);
+    org.assertj.core.api.Assertions.assertThat(updatedPendingAugust.at("/items/0/name").asText())
+        .isEqualTo("Energia residencial");
+    org.assertj.core.api.Assertions.assertThat(updatedPendingAugust.at("/items/0/category").asText())
+        .isEqualTo("Moradia");
+    org.assertj.core.api.Assertions.assertThat(updatedPendingAugust.at("/items/0/dueDay").asInt())
+        .isEqualTo(20);
+    org.assertj.core.api.Assertions.assertThat(updatedPendingAugust.at("/items/0/amount").decimalValue())
+        .isEqualByComparingTo("220.00");
+
     performJson(
         patch("/api/v1/fixed-expense-occurrences/{id}/amount", augustOccurrenceId),
         Map.of("amount", 247.82),
@@ -131,11 +149,11 @@ class FixedExpenseApiTests {
 
     JsonNode augustHistory = getMonth(2026, 8);
     org.assertj.core.api.Assertions.assertThat(augustHistory.at("/items/0/name").asText())
-        .isEqualTo("Energia");
+        .isEqualTo("Energia residencial");
     org.assertj.core.api.Assertions.assertThat(augustHistory.at("/items/0/category").asText())
-        .isEqualTo("Casa");
+        .isEqualTo("Moradia");
     org.assertj.core.api.Assertions.assertThat(augustHistory.at("/items/0/dueDay").asInt())
-        .isEqualTo(18);
+        .isEqualTo(20);
     org.assertj.core.api.Assertions.assertThat(augustHistory.at("/items/0/amount").decimalValue())
         .isEqualByComparingTo("247.82");
     org.assertj.core.api.Assertions.assertThat(augustHistory.at("/summary/paidTotal").decimalValue())

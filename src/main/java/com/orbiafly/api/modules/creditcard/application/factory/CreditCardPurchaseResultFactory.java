@@ -36,6 +36,7 @@ public class CreditCardPurchaseResultFactory {
             installment.getCompetenceYear(),
             installment.getCompetenceMonth()).isBefore(currentCompetence))
         .toList();
+    CreditCardInstallment firstInstallment = installments.isEmpty() ? null : installments.getFirst();
     CreditCardInstallmentResult nextInstallment = futureInstallments.stream()
         .findFirst()
         .map(installmentResultFactory::createCreditCardInstallmentResult)
@@ -50,8 +51,12 @@ public class CreditCardPurchaseResultFactory {
         purchase.getDescription(),
         purchase.getTotalAmount(),
         purchase.getPurchaseDate(),
+        purchase.getPurchaseType(),
         purchase.getInstallmentCount(),
         purchase.getInstallmentAmount(),
+        firstInstallment == null ? 0 : firstInstallment.getCompetenceYear(),
+        firstInstallment == null ? 0 : firstInstallment.getCompetenceMonth(),
+        firstInstallment == null ? null : firstInstallment.getDueDate(),
         purchase.getCreditCard().getId(),
         purchase.getCreditCard().getName(),
         purchase.getCreditCard().getBrand(),

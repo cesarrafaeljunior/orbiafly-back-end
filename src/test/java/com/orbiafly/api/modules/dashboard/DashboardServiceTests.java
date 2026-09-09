@@ -1,6 +1,7 @@
 package com.orbiafly.api.modules.dashboard;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.orbiafly.api.modules.dashboard.application.contract.DashboardServiceInterface;
@@ -8,6 +9,10 @@ import com.orbiafly.api.modules.dashboard.application.service.DashboardServiceIm
 import com.orbiafly.api.modules.dashboard.web.dto.response.DashboardMonthlyResponseDTO;
 import com.orbiafly.api.modules.dashboard.web.factory.DashboardMonthlyResponseDTOFactory;
 import com.orbiafly.api.modules.financialaccount.application.contract.FinancialAccountServiceInterface;
+import com.orbiafly.api.modules.financialprojection.application.contract.MonthlyFinancialProjectionServiceInterface;
+import com.orbiafly.api.modules.financialprojection.application.model.MonthlyFinancialProjectionResult;
+import com.orbiafly.api.modules.financialprojection.domain.FinancialHealthLevel;
+import com.orbiafly.api.modules.financialprojection.web.factory.MonthlyFinancialProjectionResponseDTOFactory;
 import com.orbiafly.api.modules.financialaccount.web.dto.response.FinancialAccountsOverviewResponseDTO;
 import com.orbiafly.api.modules.fixedexpense.application.contract.FixedExpenseServiceInterface;
 import com.orbiafly.api.modules.fixedexpense.domain.PaymentStatus;
@@ -42,6 +47,9 @@ class DashboardServiceTests {
   @Mock
   private FinancialAccountServiceInterface financialAccountService;
 
+  @Mock
+  private MonthlyFinancialProjectionServiceInterface projectionService;
+
   private DashboardServiceInterface dashboardService;
 
   @BeforeEach
@@ -51,10 +59,14 @@ class DashboardServiceTests {
         ZoneId.of("America/Sao_Paulo"));
     when(financialAccountService.listFinancialAccounts(false)).thenReturn(
         new FinancialAccountsOverviewResponseDTO(BigDecimal.ZERO, 0, List.of()));
+    lenient().when(projectionService.getMonthlyProjectionResult(2026, 8)).thenReturn(projection(2026, 8));
+    lenient().when(projectionService.getMonthlyProjectionResult(2026, 9)).thenReturn(projection(2026, 9));
+    lenient().when(projectionService.getMonthlyProjectionResult(2026, 2)).thenReturn(projection(2026, 2));
     dashboardService = new DashboardServiceImpl(
         fixedExpenseService,
         financialAccountService,
-        new DashboardMonthlyResponseDTOFactory(),
+        projectionService,
+        new DashboardMonthlyResponseDTOFactory(new MonthlyFinancialProjectionResponseDTOFactory()),
         clock);
   }
 
@@ -156,6 +168,21 @@ class DashboardServiceTests {
 
     assertThat(dashboard.largestExpenses().getFirst().dueDate())
         .isEqualTo(LocalDate.of(2026, 2, 28));
+  }
+
+  private MonthlyFinancialProjectionResult projection(int year, int month) {
+    return new MonthlyFinancialProjectionResult(
+        year,
+        month,
+        BigDecimal.ZERO,
+        BigDecimal.ZERO,
+        BigDecimal.ZERO,
+        BigDecimal.ZERO,
+        BigDecimal.ZERO,
+        LocalDate.of(year, month, 1),
+        FinancialHealthLevel.HEALTHY,
+        "Sem eventos projetados.",
+        List.of());
   }
 
   private MonthlyExpenseResponseDTO expense(

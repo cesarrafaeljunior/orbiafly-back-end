@@ -321,10 +321,35 @@ public class FinancialAccountServiceImpl implements FinancialAccountServiceInter
             transactionId,
             currentUserProvider.currentUserId())
         .orElseThrow(() -> new ResourceNotFoundException("Movimentação de pagamento não encontrada."));
+    return reverseDebitTransaction(original, occurredOn, description);
+  }
+
+  @Override
+  @Transactional
+  public void reverseFinancialAccountDebitForReference(
+      FinancialReferenceType referenceType,
+      UUID referenceId,
+      LocalDate occurredOn,
+      String description) {
+    transactionRepository.findDebitByReferenceForUpdate(
+            currentUserProvider.currentUserId(),
+            referenceType,
+            referenceId,
+            FinancialTransactionType.DEBIT)
+        .stream()
+        .filter(transaction -> !transactionRepository.existsByReversalOfId(transaction.getId()))
+        .findFirst()
+        .ifPresent(transaction -> reverseDebitTransaction(transaction, occurredOn, description));
+  }
+
+  private AccountTransactionResult reverseDebitTransaction(
+      FinancialTransaction original,
+      LocalDate occurredOn,
+      String description) {
     if (original.getType() != FinancialTransactionType.DEBIT) {
       throw new IllegalStateException("Somente movimentações de débito podem ser revertidas.");
     }
-    if (transactionRepository.existsByReversalOfId(transactionId)) {
+    if (transactionRepository.existsByReversalOfId(original.getId())) {
       throw new IllegalStateException("Este pagamento já possui uma reversão financeira.");
     }
     FinancialAccount account = findAccountForUpdate(original.getFinancialAccount().getId());
