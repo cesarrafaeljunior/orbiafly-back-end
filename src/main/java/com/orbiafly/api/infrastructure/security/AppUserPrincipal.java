@@ -16,6 +16,7 @@ public class AppUserPrincipal implements UserDetails {
   private final String username;
   private final String passwordHash;
   private final boolean active;
+  private final long tokenVersion;
   private final Set<AppRole> roles;
 
   public AppUserPrincipal(AppUser user) {
@@ -24,6 +25,7 @@ public class AppUserPrincipal implements UserDetails {
     this.username = user.getUsername();
     this.passwordHash = user.getPasswordHash();
     this.active = user.isActive();
+    this.tokenVersion = user.getTokenVersion();
     this.roles = user.getRoles();
   }
 
@@ -37,6 +39,10 @@ public class AppUserPrincipal implements UserDetails {
 
   public Set<AppRole> roles() {
     return roles;
+  }
+
+  public long tokenVersion() {
+    return tokenVersion;
   }
 
   @Override

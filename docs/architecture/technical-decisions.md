@@ -119,7 +119,7 @@
 - Recuperacao de senha usa codigo numerico de 6 digitos, validade de 15 minutos e uso unico.
 - O codigo de recuperacao e armazenado somente como hash BCrypt.
 - Solicitacoes de recuperacao retornam sucesso mesmo quando a conta nao existe, evitando enumeracao de usuarios.
-- Nesta etapa, o envio gratuito do codigo e feito no log da aplicacao por `PasswordResetCodeSenderInterface`; SMTP ou outro provedor deve substituir essa fronteira quando houver infraestrutura de envio.
+- Fora de `local` e `test`, o codigo e enviado por SMTP e nunca e escrito em logs. Cada codigo aceita no maximo cinco tentativas antes de ser invalidado.
 
 ## ORB - Gastos avulsos - 2026-09-09
 

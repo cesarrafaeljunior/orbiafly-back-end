@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthServiceInterface {
 
   private static final Duration PASSWORD_RESET_CODE_TTL = Duration.ofMinutes(15);
+  private static final int MAXIMUM_RESET_ATTEMPTS = 5;
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
   private final AppUserRepositoryInterface userRepository;
@@ -113,7 +114,7 @@ public class AuthServiceImpl implements AuthServiceInterface {
   }
 
   @Override
-  @Transactional
+  @Transactional(noRollbackFor = BadCredentialsException.class)
   public void confirmPasswordReset(String login, String code, String newPassword) {
     AppUser user = findUserByLogin(login);
     if (!user.isActive()) {
@@ -125,9 +126,12 @@ public class AuthServiceImpl implements AuthServiceInterface {
         .findByUserIdAndUsedAtIsNullOrderByCreatedAtDesc(user.getId());
     PasswordResetCode validCode = activeCodes.stream()
         .filter(resetCode -> resetCode.getExpiresAt().isAfter(now))
-        .filter(resetCode -> passwordEncoder.matches(code, resetCode.getCodeHash()))
         .findFirst()
         .orElseThrow(() -> new BadCredentialsException("Código inválido ou expirado."));
+    if (!passwordEncoder.matches(code, validCode.getCodeHash())) {
+      validCode.registerFailedAttempt(now, MAXIMUM_RESET_ATTEMPTS);
+      throw new BadCredentialsException("Código inválido ou expirado.");
+    }
 
     user.updatePasswordHash(passwordEncoder.encode(newPassword), now);
     activeCodes.forEach(resetCode -> resetCode.markUsed(now));

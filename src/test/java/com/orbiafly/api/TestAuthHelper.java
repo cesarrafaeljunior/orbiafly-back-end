@@ -1,8 +1,8 @@
 package com.orbiafly.api;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
+import jakarta.servlet.http.Cookie;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -22,7 +22,7 @@ public class TestAuthHelper {
 
   public MockHttpServletRequestBuilder authenticated(MockHttpServletRequestBuilder request)
       throws Exception {
-    return request.header("Authorization", "Bearer " + adminToken());
+    return request.cookie(new Cookie("orbiafly_session", adminToken()));
   }
 
   public String registerAndLogin(String email, String username, String password) throws Exception {
@@ -44,16 +44,18 @@ public class TestAuthHelper {
   }
 
   public String login(String login, String password) throws Exception {
-    String response = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/login")
+    var response = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(Map.of(
                 "login", login,
                 "password", password))))
         .andExpect(MockMvcResultMatchers.status().isOk())
         .andReturn()
-        .getResponse()
-        .getContentAsString();
-    JsonNode json = objectMapper.readTree(response);
-    return json.get("accessToken").asText();
+        .getResponse();
+    Cookie cookie = response.getCookie("orbiafly_session");
+    if (cookie == null) {
+      throw new IllegalStateException("Cookie de autenticação ausente.");
+    }
+    return cookie.getValue();
   }
 }

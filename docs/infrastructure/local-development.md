@@ -9,18 +9,19 @@
 
 ```bash
 cp .env.example .env
+# Preencha POSTGRES_PASSWORD, PGADMIN_DEFAULT_PASSWORD, APP_JWT_SECRET e APP_ADMIN_*
 docker compose up -d postgres pgadmin
 ./mvnw spring-boot:run
 ```
 
 Servicos:
 
-- Backend: `http://localhost:8080`.
-- Health: `http://localhost:8080/actuator/health`.
-- PostgreSQL: `localhost:5432`.
+- Backend: `http://localhost:4000`.
+- Health: `http://localhost:4000/actuator/health`.
+- PostgreSQL: `localhost:5487`.
 - pgAdmin: `http://localhost:5050`.
 
-O Compose le `.env`. A aplicacao executada diretamente usa os defaults seguros do profile `local` ou as variaveis `DB_*` exportadas no shell. Se credenciais do PostgreSQL forem alteradas em `.env`, os valores correspondentes devem ser informados ao processo Spring.
+O Compose le `.env`. A aplicacao executada diretamente usa os defaults exclusivos de desenvolvimento do profile `local` ou as variaveis `DB_*` exportadas no shell. Se credenciais do PostgreSQL forem alteradas em `.env`, os valores correspondentes devem ser informados ao processo Spring.
 
 ## Stack completa
 

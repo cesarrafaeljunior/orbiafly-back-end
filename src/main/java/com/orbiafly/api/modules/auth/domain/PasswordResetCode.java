@@ -33,6 +33,9 @@ public class PasswordResetCode {
   @Column(name = "used_at")
   private Instant usedAt;
 
+  @Column(name = "failed_attempts", nullable = false)
+  private int failedAttempts;
+
   protected PasswordResetCode() {
   }
 
@@ -46,6 +49,13 @@ public class PasswordResetCode {
 
   public void markUsed(Instant now) {
     this.usedAt = now;
+  }
+
+  public void registerFailedAttempt(Instant now, int maximumAttempts) {
+    failedAttempts++;
+    if (failedAttempts >= maximumAttempts) {
+      markUsed(now);
+    }
   }
 
   public UUID getId() {
@@ -66,5 +76,9 @@ public class PasswordResetCode {
 
   public Instant getUsedAt() {
     return usedAt;
+  }
+
+  public int getFailedAttempts() {
+    return failedAttempts;
   }
 }

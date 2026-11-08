@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Optional;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -16,12 +17,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtService jwtService;
   private final AppUserRepositoryInterface userRepository;
+  private final AuthCookieService cookieService;
 
   public JwtAuthenticationFilter(
       JwtService jwtService,
-      AppUserRepositoryInterface userRepository) {
+      AppUserRepositoryInterface userRepository,
+      AuthCookieService cookieService) {
     this.jwtService = jwtService;
     this.userRepository = userRepository;
+    this.cookieService = cookieService;
   }
 
   @Override
@@ -29,24 +33,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       HttpServletRequest request,
       HttpServletResponse response,
       FilterChain filterChain) throws ServletException, IOException {
+    tokenFrom(request).ifPresent(this::authenticate);
+    filterChain.doFilter(request, response);
+  }
+
+  private Optional<String> tokenFrom(HttpServletRequest request) {
     String header = request.getHeader("Authorization");
     if (header != null && header.startsWith("Bearer ")) {
-      authenticate(header.substring(7));
+      return Optional.of(header.substring(7));
     }
-    filterChain.doFilter(request, response);
+    return cookieService.read(request);
   }
 
   private void authenticate(String token) {
     try {
       JwtService.JwtClaims claims = jwtService.parseToken(token);
       userRepository.findById(claims.userId())
-          .filter(user -> user.isActive())
+          .filter(user -> user.isActive() && user.getTokenVersion() == claims.tokenVersion())
           .map(AppUserPrincipal::new)
           .ifPresent(principal -> SecurityContextHolder.getContext().setAuthentication(
-              new UsernamePasswordAuthenticationToken(
-                  principal,
-                  null,
-                  principal.getAuthorities())));
+              new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())));
     } catch (RuntimeException exception) {
       SecurityContextHolder.clearContext();
     }

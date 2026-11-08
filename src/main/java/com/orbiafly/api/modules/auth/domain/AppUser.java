@@ -40,6 +40,9 @@ public class AppUser {
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
 
+  @Column(name = "token_version", nullable = false)
+  private long tokenVersion;
+
   @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(name = "app_user_role", joinColumns = @JoinColumn(name = "user_id"))
   @Enumerated(EnumType.STRING)
@@ -68,6 +71,7 @@ public class AppUser {
   public void updatePasswordHash(String passwordHash, Instant now) {
     this.passwordHash = passwordHash;
     this.updatedAt = now;
+    this.tokenVersion++;
   }
 
   public UUID getId() {
@@ -100,5 +104,9 @@ public class AppUser {
 
   public Instant getUpdatedAt() {
     return updatedAt;
+  }
+
+  public long getTokenVersion() {
+    return tokenVersion;
   }
 }

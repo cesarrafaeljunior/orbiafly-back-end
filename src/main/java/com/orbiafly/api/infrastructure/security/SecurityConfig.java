@@ -20,7 +20,8 @@ public class SecurityConfig {
   @Bean
   SecurityFilterChain securityFilterChain(
       HttpSecurity http,
-      JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+      JwtAuthenticationFilter jwtAuthenticationFilter,
+      AuthenticationRateLimitFilter authenticationRateLimitFilter) throws Exception {
     return http
         .csrf(csrf -> csrf.disable())
         .cors(Customizer.withDefaults())
@@ -36,8 +37,10 @@ public class SecurityConfig {
                 "/api/v1/auth/register",
                 "/api/v1/auth/login",
                 "/api/v1/auth/password-reset/request",
-                "/api/v1/auth/password-reset/confirm").permitAll()
+                "/api/v1/auth/password-reset/confirm",
+                "/api/v1/auth/logout").permitAll()
             .anyRequest().authenticated())
+        .addFilterBefore(authenticationRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .build();
   }

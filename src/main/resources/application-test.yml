@@ -1,6 +1,11 @@
 app:
+  admin:
+    email: admin@admin.com.br
+    username: admin
+    password: admin
   security:
-    enabled: false
+    jwt-secret: test-only-secret-key-with-at-least-32-bytes
+    rate-limit-attempts: 1000
 
 spring:
   config:

@@ -1,4 +1,11 @@
 # Changelog
+## 2026-11-08 - Endurecimento de autenticacao
+
+- JWT movido para cookie `HttpOnly`, `Secure` em producao e `SameSite=Strict`; o token nao e mais retornado no JSON.
+- Adicionadas validacoes de emissor, audiencia, algoritmo, expiracao e versao de sessao.
+- Troca e recuperacao de senha revogam tokens anteriores; recuperacao limita tentativas e usa SMTP fora de local/test.
+- Endpoints publicos de autenticacao receberam rate limiting e o Compose deixou de fornecer segredos previsiveis.
+
 ## 2026-09-09
 
 - Implementado o modulo de gastos avulsos com API mensal, cadastro, edicao, exclusao, status e pagamento.

@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-orbiafly}
       POSTGRES_USER: ${POSTGRES_USER:-orbiafly}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orbiafly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
     ports:
       - "${POSTGRES_PORT:-5487}:5432"
     volumes:
@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@orbiafly.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change_me}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?Defina PGADMIN_DEFAULT_PASSWORD}
     ports:
       - "${PGADMIN_PORT:-5050}:80"
     depends_on:
@@ -44,20 +44,21 @@ services:
     restart: unless-stopped
     environment:
       APP_PORT: 4000
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
       APP_TIME_ZONE: ${APP_TIME_ZONE:-America/Sao_Paulo}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-orbiafly}
       DB_USERNAME: ${POSTGRES_USER:-orbiafly}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-orbiafly}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://localhost:4201,http://127.0.0.1:4200,http://127.0.0.1:4201}
-      APP_SECURITY_ENABLED: ${APP_SECURITY_ENABLED:-true}
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-local-development-secret-key-with-at-least-32-bytes}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?Defina APP_JWT_SECRET}
       APP_JWT_ISSUER: ${APP_JWT_ISSUER:-orbiafly-api}
-      APP_JWT_EXPIRATION_MINUTES: ${APP_JWT_EXPIRATION_MINUTES:-480}
-      APP_INITIAL_ADMIN_USERNAME: ${APP_INITIAL_ADMIN_USERNAME:-admin}
-      APP_INITIAL_ADMIN_EMAIL: ${APP_INITIAL_ADMIN_EMAIL:-admin@admin.com.br}
-      APP_INITIAL_ADMIN_PASSWORD: ${APP_INITIAL_ADMIN_PASSWORD:-admin}
+      APP_JWT_AUDIENCE: ${APP_JWT_AUDIENCE:-orbiafly-web}
+      APP_JWT_EXPIRATION_MINUTES: ${APP_JWT_EXPIRATION_MINUTES:-60}
+      APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:?Defina APP_ADMIN_USERNAME}
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:?Defina APP_ADMIN_EMAIL}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?Defina APP_ADMIN_PASSWORD}
     ports:
       - "${APP_PORT:-4000}:4000"
     depends_on:

@@ -21,12 +21,14 @@ public class WebConfig implements WebMvcConfigurer {
         .addMapping("/api/**")
         .allowedOrigins(allowedOrigins)
         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        .allowedHeaders("*");
+        .allowedHeaders("*")
+        .allowCredentials(true);
 
     registry
         .addMapping("/actuator/health")
         .allowedOrigins(allowedOrigins)
         .allowedMethods("GET")
-        .allowedHeaders("*");
+        .allowedHeaders("*")
+        .allowCredentials(true);
   }
 }

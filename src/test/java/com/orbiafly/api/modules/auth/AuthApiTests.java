@@ -1,14 +1,13 @@
 package com.orbiafly.api.modules.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,6 +18,7 @@ import com.orbiafly.api.modules.auth.domain.AppRole;
 import com.orbiafly.api.modules.auth.domain.AppUser;
 import com.orbiafly.api.modules.auth.application.contract.PasswordResetCodeSenderInterface;
 import com.orbiafly.api.modules.auth.infrastructure.persistence.AppUserRepositoryInterface;
+import jakarta.servlet.http.Cookie;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,7 +92,8 @@ class AuthApiTests {
                 "username", "ana",
                 "password", "senha-segura"))))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.accessToken", notNullValue()))
+        .andExpect(cookie().httpOnly("orbiafly_session", true))
+        .andExpect(cookie().value("orbiafly_session", org.hamcrest.Matchers.not(org.hamcrest.Matchers.blankOrNullString())))
         .andExpect(jsonPath("$.user.email").value("ana@example.com"))
         .andExpect(jsonPath("$.user.username").value("ana"))
         .andExpect(jsonPath("$.user.roles", hasItem("ROLE_USER")))
@@ -115,7 +116,8 @@ class AuthApiTests {
             .contentType(MediaType.APPLICATION_JSON)
             .content(json(Map.of("login", "bruno@example.com", "password", "senha-segura"))))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.accessToken", containsString(".")));
+        .andExpect(cookie().httpOnly("orbiafly_session", true))
+        .andExpect(jsonPath("$.accessToken").doesNotExist());
 
     mockMvc.perform(post("/api/v1/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
@@ -129,12 +131,16 @@ class AuthApiTests {
     String token = auth.registerAndLogin("fabi@example.com", "fabi", "senha-antiga");
 
     mockMvc.perform(post("/api/v1/auth/change-password")
-            .header("Authorization", "Bearer " + token)
+            .cookie(new Cookie("orbiafly_session", token))
             .contentType(MediaType.APPLICATION_JSON)
             .content(json(Map.of(
                 "currentPassword", "senha-antiga",
                 "newPassword", "senha-nova"))))
         .andExpect(status().isNoContent());
+
+    mockMvc.perform(get("/api/v1/accounts")
+            .cookie(new Cookie("orbiafly_session", token)))
+        .andExpect(status().isUnauthorized());
 
     mockMvc.perform(post("/api/v1/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
@@ -174,13 +180,44 @@ class AuthApiTests {
   }
 
   @Test
-  void protectsFinancialEndpointsAndAcceptsBearerToken() throws Exception {
+  void invalidatesResetCodeAfterFiveFailedAttempts() throws Exception {
+    auth.registerAndLogin("bia@example.com", "bia", "senha-antiga");
+
+    mockMvc.perform(post("/api/v1/auth/password-reset/request")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of("login", "bia"))))
+        .andExpect(status().isNoContent());
+
+    ArgumentCaptor<String> codeCaptor = ArgumentCaptor.forClass(String.class);
+    verify(resetCodeSender).sendPasswordResetCode(eq("bia@example.com"), eq("bia"), codeCaptor.capture());
+
+    for (int attempt = 0; attempt < 5; attempt++) {
+      mockMvc.perform(post("/api/v1/auth/password-reset/confirm")
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(json(Map.of(
+                  "login", "bia",
+                  "code", "000000",
+                  "newPassword", "senha-nova"))))
+          .andExpect(status().isUnauthorized());
+    }
+
+    mockMvc.perform(post("/api/v1/auth/password-reset/confirm")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json(Map.of(
+                "login", "bia",
+                "code", codeCaptor.getValue(),
+                "newPassword", "senha-nova"))))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void protectsFinancialEndpointsAndAcceptsAuthenticationCookie() throws Exception {
     mockMvc.perform(get("/api/v1/accounts"))
         .andExpect(status().isUnauthorized());
 
     String token = auth.registerAndLogin("carol@example.com", "carol", "senha-segura");
     mockMvc.perform(get("/api/v1/accounts")
-            .header("Authorization", "Bearer " + token))
+            .cookie(new Cookie("orbiafly_session", token)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.accounts").isArray());
   }
@@ -205,7 +242,7 @@ class AuthApiTests {
     String secondToken = auth.registerAndLogin("eva@example.com", "eva", "senha-segura");
 
     JsonNode created = performJson(
-        post("/api/v1/accounts").header("Authorization", "Bearer " + firstToken),
+        post("/api/v1/accounts").cookie(new Cookie("orbiafly_session", firstToken)),
         Map.of(
             "name", "Conta Dani",
             "type", "CHECKING",
@@ -215,17 +252,17 @@ class AuthApiTests {
     String accountId = created.get("id").asText();
 
     mockMvc.perform(get("/api/v1/accounts/{id}", accountId)
-            .header("Authorization", "Bearer " + secondToken))
+            .cookie(new Cookie("orbiafly_session", secondToken)))
         .andExpect(status().isNotFound());
 
     mockMvc.perform(get("/api/v1/accounts")
-            .header("Authorization", "Bearer " + secondToken))
+            .cookie(new Cookie("orbiafly_session", secondToken)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.accounts").isEmpty())
         .andExpect(jsonPath("$.totalAvailableBalance").value(0));
 
     mockMvc.perform(get("/api/v1/accounts/{id}", accountId)
-            .header("Authorization", "Bearer " + firstToken))
+            .cookie(new Cookie("orbiafly_session", firstToken)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("Conta Dani"));
   }

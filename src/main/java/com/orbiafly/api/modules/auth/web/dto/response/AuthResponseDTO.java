@@ -1,6 +1,8 @@
 package com.orbiafly.api.modules.auth.web.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public record AuthResponseDTO(
-    String accessToken,
+    @JsonIgnore String accessToken,
     AuthUserResponseDTO user) {
 }
